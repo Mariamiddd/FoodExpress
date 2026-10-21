@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/FoodExpress/">
+    <Project Path="Food.Application/Food.Application.csproj" />
+    <Project Path="Food.Domain/Food.Domain.csproj" />
+    <Project Path="Food.Infrastucture/Food.Infrastructure.csproj" />
+    <Project Path="Food.Tests/Food.Tests.csproj" />
+    <Project Path="Food.Web/Food.Web.csproj" />
+  </Folder>
+</Solution>

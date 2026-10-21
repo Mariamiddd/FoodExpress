@@ -1,0 +1,25 @@
+@Food.Web_HostAddress = https://localhost:7280
+
+GET {{Food.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+
+GET {{Food.Web_HostAddress}}/api/Orders
+Accept: application/json
+
+###
+
+###
+
+POST {{Food.Web_HostAddress}}/api/Addresses
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "street": "Rustaveli Ave",
+  "city": "Tbilisi"
+}
+
+###
