@@ -26,17 +26,17 @@ namespace Food.Infrastructure.Repositories
         {
             return await _context.MenuItems.ToListAsync();
         }
-
+        
         public async Task AddAsync(MenuItem menuItem)
         {
             await _context.MenuItems.AddAsync(menuItem);
-            // SaveChangesAsync ამოღებულია
+            
         }
 
         public Task UpdateAsync(MenuItem menuItem)
         {
             _context.MenuItems.Update(menuItem);
-            return Task.CompletedTask; // სინქრონული ოპერაციაა, SaveChanges აღარ გვაქვს
+            return Task.CompletedTask;
         }
 
         public async Task DeleteAsync(int id)

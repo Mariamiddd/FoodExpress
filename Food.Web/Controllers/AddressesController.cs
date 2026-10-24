@@ -1,9 +1,11 @@
 ﻿using Food.Application.DTOs;
 using Food.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Food.Web.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class AddressesController : ControllerBase
@@ -21,8 +23,8 @@ namespace Food.Web.Controllers
             try
             {
                 var address = await _addressService.AddAddressAsync(request);
+                // Returns 201 Created with the created address
 
-                // Returning 201 Created status code aligns with REST standards for POST requests.
                 return StatusCode(201, address);
             }
             catch (Exception ex)

@@ -29,7 +29,9 @@ namespace Food.Infrastructure.Repositories
 
         public async Task<Order> GetOrderByIdAsync(int orderId)
         {
-            return await _context.Orders.FindAsync(orderId);
+            
+            return await _context.Orders.Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
         }
 
         public Task UpdateAsync(Order order)

@@ -5,9 +5,10 @@ using System.Text;
 
 namespace Food.Domain.Interfaces
 {
-    public interface ICartRepository
-    {
-        Task<Cart> GetCartByUserIdAsync(int userId);
-        void ClearCart(Cart cart);
+
+        public interface ICartRepository
+        {
+            Task<Cart> GetCartByUserIdAsync(string userId); 
+            void ClearCart(Cart cart);
+        }
     }
-}

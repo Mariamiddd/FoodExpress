@@ -8,9 +8,10 @@ namespace Food.Domain.Interfaces
     {
         IMenuRepository Menu { get; }
         IOrderRepository Orders { get; }
-        ICartRepository Carts { get; } // დამატებული ხაზი
-        IAddressRepository Addresses { get; } // Add this line
-        // აქ დაემატება სხვა რეპოზიტორებიც (მაგ. CartRepository), როცა დაგჭირდება
+        ICartRepository Carts { get; } 
+        IAddressRepository Addresses { get; }
+        ICartRepository Cart { get; }
+        
 
         Task<int> SaveAsync();
     }

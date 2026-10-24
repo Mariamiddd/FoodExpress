@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Food.Application.DTOs;
 using Food.Domain.Models.Entities;
+using Food.Infrastructure.Identity;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,17 +12,30 @@ namespace Food.Application.Profiles
     {
         public MappingProfile()
         {
-            // We map from Entity to DTO
+            //  map from Entity to DTO
             CreateMap<Address, AddressDTO>();
 
-            // We map from DTO to Entity
+            //  map from DTO to Entity
             CreateMap<CreateAddressDTO, Address>();
 
-            //will add  other mappings here later (e.g., Orders, MenuItems)
+            //user mappungs
+            CreateMap<RegisterDTO, ApplicationUser>()
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email));
+
+            //order mappings
             CreateMap<Order, OrderDTO>()
-    .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.CreatedAt))
-    .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalPrice))
+    .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+    .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
     .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+
+            // created mappings for Restaurant and MenuItem
+            CreateMap<CreateRestaurantDTO, Restaurant>();
+            CreateMap<CreateMenuItemDTO, MenuItem>();
+
+            //categoru
+            CreateMap<CreateCategoryDTO, Category>();
         }
+
+
     }
 }

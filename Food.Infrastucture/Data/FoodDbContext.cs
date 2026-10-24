@@ -11,14 +11,10 @@ namespace Food.Infrastructure.Data
         {
         }
 
-        public DbSet<User> Users { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<Restaurant> Restaurants { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<MenuItem> MenuItems { get; set; }
-        public DbSet<Dessert> Desserts { get; set; }
-        public DbSet<Drink> Drinks { get; set; }
-        public DbSet<Pizza> Pizzas { get; set; }
         public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
@@ -28,20 +24,11 @@ namespace Food.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Table-per-Hierarchy (TPH) Inheritance for MenuItem
-            modelBuilder.Entity<MenuItem>(entity =>
-            {
-                entity.HasDiscriminator<string>("ItemType")
-                      .HasValue<MenuItem>("MenuItem")
-                      .HasValue<Dessert>("Dessert")
-                      .HasValue<Drink>("Drink")
-                      .HasValue<Pizza>("Pizza");
+            modelBuilder.Entity<MenuItem>()
+                .Property(m => m.Price)
+                .HasColumnType("decimal(18,2)");
 
-                entity.Property("ItemType").HasMaxLength(8);
-                entity.Property(m => m.Price).HasColumnType("decimal(18,2)");
-            });
-
-            // Decimal Precision Configurations
+            // configure decimal precision for TotalPrice in Cart and Order, and UnitPrice in CartItem and OrderItem
             modelBuilder.Entity<Cart>()
                 .Property(c => c.TotalPrice)
                 .HasColumnType("decimal(18,2)");
@@ -58,7 +45,11 @@ namespace Food.Infrastructure.Data
                 .Property(oi => oi.PriceAtTimeOfOrder)
                 .HasColumnType("decimal(18,2)");
 
-            // Relationships
+            modelBuilder.Entity<OrderItem>()
+               .Property(oi => oi.UnitPrice)
+               .HasColumnType("decimal(18,2)");
+
+            // configure relationships between entities
             modelBuilder.Entity<Address>()
                 .HasOne(a => a.User)
                 .WithMany()
@@ -109,7 +100,7 @@ namespace Food.Infrastructure.Data
 
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.User)
-                .WithMany(u => u.Orders)
+                .WithMany(u => u.Orders) 
                 .HasForeignKey(o => o.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 

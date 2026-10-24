@@ -17,11 +17,11 @@ namespace Food.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Cart> GetCartByUserIdAsync(int userId)
+        public async Task<Cart> GetCartByUserIdAsync(string userId)
         {
             return await _context.Carts
                 .Include(c => c.CartItems)
-                .ThenInclude(ci => ci.MenuItem)
+                .ThenInclude(i => i.MenuItem)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
 

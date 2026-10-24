@@ -16,17 +16,21 @@ namespace Food.Infrastructure.Repositories
         public ICartRepository Carts { get; }
         public IAddressRepository Addresses { get; }
 
+        public ICartRepository Cart { get; }
+
         public UnitOfWork(FoodDbContext context,
                            IMenuRepository menuRepository,
                            IOrderRepository orderRepository,
                            ICartRepository cartRepository,
-                           IAddressRepository addressRepository) // დაემატა აქ
+                           IAddressRepository addressRepository) 
         {
             _context = context;
             Menu = menuRepository;
             Orders = orderRepository;
-            Carts = cartRepository; // დაემატა აქ
-            Addresses = addressRepository; // დაემატა აქ
+            Carts = cartRepository;     
+            Addresses = addressRepository; 
+
+            
         }
         public async Task<int> SaveAsync()
         {

@@ -13,11 +13,11 @@ namespace Food.Domain.Models.Entities
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
 
-        // Renamed to match FoodDbContext configuration
+        // keeps track of the price when we create the order, in case the price of the menu item changes later
         public decimal PriceAtTimeOfOrder { get; set; }
         public decimal LineTotal => Quantity * PriceAtTimeOfOrder;
 
-        // Added missing navigation properties required by EF Core
+        // Navigation properties
         public Order Order { get; set; }
         public MenuItem MenuItem { get; set; }
     }

@@ -9,5 +9,6 @@ namespace Food.Domain.Interfaces
     {
         Task AddAsync(Address address);
         Task<IEnumerable<Address>> GetAllAsync();
+        Task<IEnumerable<Address>> GetAddressesByUserIdAsync(int userId);
     }
 }

@@ -1,21 +1,26 @@
-﻿using Food.Application.DTOs;
+using Food.Application.DTOs;
 using Food.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Food.Web.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
-        
+
         public OrdersController(IOrderService orderService)
         {
             _orderService = orderService;
         }
 
-        // 1. ყველა შეკვეთის წამოღება: GET /api/Food
+        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // get all orders for admin users
         [HttpGet]
         public async Task<IActionResult> GetAllOrders()
         {
@@ -23,36 +28,45 @@ namespace Food.Web.Controllers
             return Ok(orders);
         }
 
+        // get orders for the currently authenticated user
+        [HttpGet("my")]
+        public async Task<IActionResult> GetUserOrders()
+        {
+            var order = await _orderService.GetUserOrdersAsync(GetUserId());
+            return Ok(order);
+        }
+
+        // get order by id for admin users
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrderById(int id)
         {
             var order = await _orderService.GetOrderByIdAsync(id);
             if (order == null)
             {
-                return NotFound();
+                return NotFound(new { message = "order not found." });
             }
             return Ok(order);
         }
 
-        // POST: api/Orders
+        // post new order for the currently authenticated user
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequestDTO request)
         {
             try
             {
-                var order = await _orderService.CreateOrderAsync(request.UserId, request.AddressId);
+                var userId = GetUserId();
+                var order = await _orderService.CreateOrderAsync(userId, request.AddressId);
 
-                // REST სტანდარტი: ახალი რესურსის შექმნისას ბრუნდება 201 Created და ახალი რესურსის მისამართი
+                
                 return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
             }
             catch (Exception ex)
             {
-                // ვალიდაციის ერორებს ვიჭერთ და ვაბრუნებთ 400 Bad Request სტატუსით
                 return BadRequest(new { message = ex.Message });
             }
         }
 
-        // PATCH: api/Orders/{id}/status
+        // update order status for admin users patch request
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequestDTO request)
         {
@@ -61,10 +75,10 @@ namespace Food.Web.Controllers
                 var success = await _orderService.UpdateOrderStatusAsync(id, request.Status);
                 if (!success)
                 {
-                    return NotFound(new { message = "შეკვეთა ვერ მოიძებნა." });
+                    return NotFound(new { message = "order not found." });
                 }
 
-                // REST სტანდარტი: წარმატებული განახლებისას ბრუნდება 204 NoContent
+                
                 return NoContent();
             }
             catch (Exception ex)
