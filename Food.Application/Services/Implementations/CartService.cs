@@ -17,7 +17,7 @@ namespace Food.Application.Services.Implementations
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<object> GetCartAsync(string userId)
+        public async Task<object> GetCartAsync(int userId)
         {
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
             if (cart == null) return null;
@@ -36,7 +36,7 @@ namespace Food.Application.Services.Implementations
             };
         }
 
-        public async Task AddToCartAsync(string userId, AddToCartDTO dto)
+        public async Task AddToCartAsync(int userId, AddToCartDTO dto)
         {
             if (dto.Quantity <= 0) throw new Exception("რაოდენობა უნდა იყოს 0-ზე მეტი.");
 
@@ -46,6 +46,11 @@ namespace Food.Application.Services.Implementations
 
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
             // if cart is null, create a new cart
+            if(cart == null)
+            {
+                cart = new Cart { UserId = userId };
+
+            }
 
             var existingItem = cart.CartItems.FirstOrDefault(i => i.MenuItemId == dto.MenuItemId);
             if (existingItem != null)
@@ -65,7 +70,7 @@ namespace Food.Application.Services.Implementations
             await _unitOfWork.SaveAsync();
         }
 
-        public async Task UpdateCartItemAsync(string userId, int menuItemId, int quantity)
+        public async Task UpdateCartItemAsync(int userId, int menuItemId, int quantity)
         {
             if (quantity <= 0) throw new Exception("რაოდენობა უნდა იყოს 0-ზე მეტი.");
 
@@ -78,7 +83,7 @@ namespace Food.Application.Services.Implementations
             await _unitOfWork.SaveAsync();
         }
 
-        public async Task RemoveFromCartAsync(string userId, int menuItemId)
+        public async Task RemoveFromCartAsync(int userId, int menuItemId)
         {
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
             var item = cart?.CartItems.FirstOrDefault(i => i.MenuItemId == menuItemId);

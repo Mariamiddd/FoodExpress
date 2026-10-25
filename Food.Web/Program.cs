@@ -21,7 +21,7 @@ namespace Food.Web
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +45,7 @@ namespace Food.Web
             builder.Services.AddScoped<IUsersService, UsersService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IAdminService, AdminService>();
+
 
 
             // Add Swagger with JWT Support
@@ -86,9 +87,10 @@ namespace Food.Web
 
 
 
-            // Add identity
-            builder.Services.AddIdentityCore<ApplicationUser>()
-                .AddEntityFrameworkStores<FoodDbContext>();
+            // add identity with roles
+            builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+                .AddEntityFrameworkStores<FoodDbContext>()
+                .AddDefaultTokenProviders();
 
             // Add JWT Authentication
             var jwtKey = builder.Configuration["Jwt:Key"];
@@ -112,6 +114,16 @@ namespace Food.Web
 
             var app = builder.Build();
 
+
+            // Seed roles and admin user
+            using (var scope = app.Services.CreateScope())
+            {
+                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+                await SeedRolesAndAdminAsync(roleManager, userManager);
+            }
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -129,6 +141,32 @@ namespace Food.Web
             app.MapControllers();
 
             app.Run();
+        }
+        // seed roles and admin user
+        private static async Task SeedRolesAndAdminAsync(RoleManager<IdentityRole> roleManager, UserManager<ApplicationUser> userManager)
+        {
+            // Create Roles
+            string[] roleNames = { "Admin", "Customer" };
+            foreach (var roleName in roleNames)
+            {
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(roleName));
+                }
+            }
+
+            // creating default admin user
+            string adminEmail = "admin@gmail.com";
+            var adminUser = await userManager.FindByEmailAsync(adminEmail);
+            if (adminUser == null)
+            {
+                adminUser = new ApplicationUser { UserName = adminEmail, Email = adminEmail };
+                var createPowerUser = await userManager.CreateAsync(adminUser, "Admin123!");
+                if (createPowerUser.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                }
+            }
         }
     }
 }

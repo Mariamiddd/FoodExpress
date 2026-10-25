@@ -10,13 +10,14 @@ namespace Food.Application.Services.Implementations
 {
     public class UsersService : IUsersService
     {
-        //private readonly RoleManager<IdentityRole> _roleManager; davamto mere
-
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public UsersService(UserManager<ApplicationUser> userManager)
+        private readonly RoleManager<IdentityRole> _roleManager;
+
+        public UsersService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
+            _roleManager = roleManager;
         }
 
         public async Task RegisterUserAsync(RegisterDTO dto, CancellationToken cancellationToken = default)
@@ -34,6 +35,14 @@ namespace Food.Application.Services.Implementations
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new Exception($"Registration failed: {errors}");
             }
+
+
+            //default customre role asigning
+            if (await _roleManager.RoleExistsAsync("Customer"))
+            {
+                await _userManager.AddToRoleAsync(user, "Customer");
+            }
+
         }
 
         public async Task<bool> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
@@ -43,8 +52,7 @@ namespace Food.Application.Services.Implementations
             {
                 return false;
             }
-            var result = await _userManager.CheckPasswordAsync(user, dto.Password);
-            return result;
+            return await _userManager.CheckPasswordAsync(user, dto.Password);
         }
     }
 }

@@ -29,14 +29,14 @@ namespace Food.Application.Services.Implementations
             return _mapper.Map<OrderDTO>(order);
         }
 
-        public async Task<OrderDTO> GetUserOrdersAsync(string userId)
+        public async Task<IEnumerable<OrderDTO>> GetUserOrdersAsync(int userId)
         {
             var orders = await _unitOfWork.Orders.GetAllAsync();
-            var userOrder = orders.FirstOrDefault(o => o.UserId == userId);
-            return _mapper.Map<OrderDTO>(userOrder);
+            var userOrders = orders.Where(o => o.UserId == userId);
+            return _mapper.Map<IEnumerable<OrderDTO>>(userOrders);
         }
 
-        public async Task<OrderDTO> CreateOrderAsync(string userId, int addressId)
+        public async Task<OrderDTO> CreateOrderAsync(int userId, int addressId)
         {
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
 

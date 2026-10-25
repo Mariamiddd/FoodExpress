@@ -7,8 +7,7 @@ namespace Food.Web.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize(Roles = "Admin")] will uncomment when implement user admin lgin and roles
-    [Authorize] // anyone can access this controller whe logged in
+    [Authorize(Roles = "Admin")] 
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
@@ -76,9 +75,7 @@ namespace Food.Web.Controllers
             }
         }
 
-        #endregion
 
-        #region Menu Item Management
 
         // post method for creating a new menu item
         [HttpPost("menuitem")]
@@ -135,9 +132,7 @@ namespace Food.Web.Controllers
             }
         }
 
-        #endregion
 
-        #region Category Management
 
         // post method for creating a new category
         [HttpPost("category")]

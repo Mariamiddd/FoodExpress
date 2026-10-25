@@ -26,7 +26,20 @@ namespace Food.Application.Services.Implementations
             _userManager = userManager;
         }
 
-        private AuthResponseDTO GenerateJwtToken(ApplicationUser user)
+        public async Task<AuthResponseDTO> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
+        {
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+
+            if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
+            {
+                throw new UnauthorizedAccessException("Invalid email or password.");
+            }
+            var userRoles = await _userManager.GetRolesAsync(user);
+            return GenerateJwtToken(user, userRoles);
+
+        }
+
+        private AuthResponseDTO GenerateJwtToken(ApplicationUser user, IList<string> roles)
         {
             var jwtKey = _configuration["Jwt:Key"];
             var issuer = _configuration["Jwt:Issuer"];
@@ -41,6 +54,12 @@ namespace Food.Application.Services.Implementations
             new Claim(ClaimTypes.Name, user.UserName)
         };
 
+            //injecting roles into the claims
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -53,27 +72,13 @@ namespace Food.Application.Services.Implementations
                 signingCredentials: credentials
             );
 
-            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
             return new AuthResponseDTO
             {
-                Token = tokenString,
+                Token = new JwtSecurityTokenHandler().WriteToken(token),
                 ExpiresAt = expiresAt
             };
         }
 
 
-
-        public async Task<AuthResponseDTO> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
-        {
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-
-            if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
-            {
-                throw new UnauthorizedAccessException("Invalid email or password.");
-            }
-            return GenerateJwtToken(user);
-
-        }
     }
 }

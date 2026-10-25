@@ -18,7 +18,7 @@ namespace Food.Web.Controllers
             _orderService = orderService;
         }
 
-        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
+        private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
         // get all orders for admin users
         [HttpGet]
