@@ -1,8 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Food.Domain.Models.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Food.Infrastructure.Identity;
-
+using Food.Domain.Models.Identity;  
 namespace Food.Infrastructure.Data
 {
     public class FoodDbContext : IdentityDbContext<ApplicationUser>
@@ -24,7 +23,6 @@ namespace Food.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<ApplicationUser>().ToTable("AspNetUsers");
 
             modelBuilder.Entity<MenuItem>()
                 .Property(m => m.Price)

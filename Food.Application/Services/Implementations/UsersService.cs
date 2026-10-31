@@ -1,6 +1,6 @@
 ﻿using Food.Application.DTOs;
 using Food.Application.Interfaces;
-using Food.Infrastructure.Identity;
+using Food.Domain.Models.Identity;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;

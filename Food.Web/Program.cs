@@ -6,7 +6,7 @@ using Food.Application.Services.Implementations;
 using Food.Application.Services.Interfaces;
 using Food.Domain.Interfaces;
 using Food.Infrastructure.Data;
-using Food.Infrastructure.Identity;
+using Food.Domain.Models.Identity;
 using Food.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;

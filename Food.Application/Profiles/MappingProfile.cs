@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Food.Application.DTOs;
 using Food.Domain.Models.Entities;
-using Food.Infrastructure.Identity;
+using Food.Domain.Models.Identity;
 using System;
 using System.Collections.Generic;
 using System.Text;

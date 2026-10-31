@@ -1,7 +1,9 @@
 ﻿using Food.Application.DTOs;
 using Food.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Food.Web.Controllers
 {
@@ -17,36 +19,29 @@ namespace Food.Web.Controllers
             _addressService = addressService;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AddAddress([FromBody] CreateAddressDTO request)
+        private string GetUserId()
         {
-            try
-            {
-                var address = await _addressService.AddAddressAsync(request);
-                // Returns 201 Created with the created address
-
-                return StatusCode(201, address);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException();
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetUserAddresses(string userId)
+        [HttpPost]
+        public async Task<IActionResult> AddAddress(
+            [FromBody] CreateAddressDTO request)
         {
-            try
-            {
-                var addresses = await _addressService.GetUserAddressesAsync(userId);
+            var address = await _addressService.AddAddressAsync(
+                GetUserId(), request);
 
-                // Returns 200 OK with the list of addresses
-                return Ok(addresses);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return StatusCode(201, address);
+        }
+
+        [HttpGet("my")]
+        public async Task<IActionResult> GetMyAddresses()
+        {
+            var addresses =
+                await _addressService.GetUserAddressesAsync(GetUserId());
+
+            return Ok(addresses);
         }
     }
 }

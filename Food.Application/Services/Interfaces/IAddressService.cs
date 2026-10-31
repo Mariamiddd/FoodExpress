@@ -7,7 +7,14 @@ namespace Food.Application.Interfaces
 {
     public interface IAddressService
     {
-        Task<AddressDTO> AddAddressAsync(CreateAddressDTO request);
-        Task<IEnumerable<AddressDTO>> GetUserAddressesAsync(string userId);
+        public interface IAddressService
+        {
+            Task<AddressDTO> AddAddressAsync(
+                string userId,
+                CreateAddressDTO request);
+
+            Task<IEnumerable<AddressDTO>> GetUserAddressesAsync(
+                string userId);
+        }
     }
 }
