@@ -31,7 +31,7 @@ namespace Food.Application.Services.Implementations
             return _mapper.Map<AddressDTO>(address);
         }
 
-        public async Task<IEnumerable<AddressDTO>> GetUserAddressesAsync(int userId)
+        public async Task<IEnumerable<AddressDTO>> GetUserAddressesAsync(string userId)
         {
             var userAddresses = await _unitOfWork.Addresses.GetAddressesByUserIdAsync(userId);
 

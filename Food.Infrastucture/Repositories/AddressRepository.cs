@@ -27,7 +27,7 @@ namespace Food.Infrastructure.Repositories
             return await _context.Addresses.ToListAsync();
         }
 
-        public async Task<IEnumerable<Address>> GetAddressesByUserIdAsync(int userId)
+        public async Task<IEnumerable<Address>> GetAddressesByUserIdAsync(string userId)
         {
             return await _context.Addresses
                 .Where(a => a.UserId == userId)

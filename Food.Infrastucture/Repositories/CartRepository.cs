@@ -17,7 +17,7 @@ namespace Food.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Cart> GetCartByUserIdAsync(int userId)
+        public async Task<Cart> GetCartByUserIdAsync(string userId)
         {
             return await _context.Carts
                 .Include(c => c.CartItems)

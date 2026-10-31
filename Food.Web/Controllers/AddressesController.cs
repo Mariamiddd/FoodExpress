@@ -34,7 +34,7 @@ namespace Food.Web.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetUserAddresses(int userId)
+        public async Task<IActionResult> GetUserAddresses(string userId)
         {
             try
             {

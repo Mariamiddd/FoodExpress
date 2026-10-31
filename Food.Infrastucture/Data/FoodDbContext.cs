@@ -24,6 +24,8 @@ namespace Food.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<ApplicationUser>().ToTable("AspNetUsers");
+
             modelBuilder.Entity<MenuItem>()
                 .Property(m => m.Price)
                 .HasColumnType("decimal(18,2)");

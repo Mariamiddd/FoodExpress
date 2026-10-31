@@ -18,7 +18,7 @@ namespace Food.Web.Controllers
             _cartService = cartService;
         }
 
-        private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         [HttpGet]
         public async Task<IActionResult> GetCart()

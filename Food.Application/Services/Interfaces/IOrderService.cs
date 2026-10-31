@@ -10,8 +10,8 @@ namespace Food.Application.Interfaces
     {
         Task<IEnumerable<OrderDTO>> GetAllOrdersAsync();
         Task<OrderDTO> GetOrderByIdAsync(int orderId);
-        Task<IEnumerable<OrderDTO>> GetUserOrdersAsync(int userId);
-        Task<OrderDTO> CreateOrderAsync(int userId, int addressId);
+        Task<IEnumerable<OrderDTO>> GetUserOrdersAsync(string userId);
+        Task<OrderDTO> CreateOrderAsync(string userId, int addressId);
         Task<bool> UpdateOrderStatusAsync(int orderId, OrderState newStatus);
     }
 }
