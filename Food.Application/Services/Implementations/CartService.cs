@@ -46,10 +46,11 @@ namespace Food.Application.Services.Implementations
 
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
             // if cart is null, create a new cart
-            if(cart == null)
+            if (cart == null)
             {
                 cart = new Cart { UserId = userId };
 
+                await _unitOfWork.Carts.AddAsync(cart);
             }
 
             var existingItem = cart.CartItems.FirstOrDefault(i => i.MenuItemId == dto.MenuItemId);

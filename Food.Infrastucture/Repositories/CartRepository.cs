@@ -24,7 +24,10 @@ namespace Food.Infrastructure.Repositories
                 .ThenInclude(i => i.MenuItem)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
-
+        public async Task AddAsync(Cart cart)
+        {
+            await _context.Carts.AddAsync(cart);
+        }
         public void ClearCart(Cart cart)
         {
             _context.CartItems.RemoveRange(cart.CartItems);

@@ -39,12 +39,16 @@ namespace Food.Web
             builder.Services.AddScoped<IAddressRepository, AddressRepository>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+
             // Add services
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<IAddressService, AddressService>();
             builder.Services.AddScoped<IUsersService, UsersService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IAdminService, AdminService>();
+            builder.Services.AddScoped<ICartService, CartService>();
+            builder.Services.AddScoped<IMenuService, MenuService>();
+            builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 
 
 

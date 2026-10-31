@@ -24,7 +24,10 @@ namespace Food.Infrastructure.Repositories
 
         public async Task<IEnumerable<MenuItem>> GetAllAsync()
         {
-            return await _context.MenuItems.ToListAsync();
+            return await _context.MenuItems
+                   .Include(m => m.Restaurant)
+                   .Include(m => m.Category)
+                   .ToListAsync();
         }
         
         public async Task AddAsync(MenuItem menuItem)

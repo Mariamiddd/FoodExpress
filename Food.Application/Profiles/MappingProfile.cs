@@ -34,6 +34,18 @@ namespace Food.Application.Profiles
 
             //categoru
             CreateMap<CreateCategoryDTO, Category>();
+
+
+            ///
+            CreateMap<MenuItem, MenuItemDTO>()
+    .ForMember(dest => dest.RestaurantName,
+        opt => opt.MapFrom(src => src.Restaurant.Name))
+    .ForMember(dest => dest.CategoryName,
+        opt => opt.MapFrom(src => src.Category.Name));
+
+            CreateMap<Restaurant, RestaurantDTO>();
+
+            CreateMap<OrderItem, OrderItemDTO>();
         }
 
 

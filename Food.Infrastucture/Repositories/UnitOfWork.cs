@@ -16,7 +16,6 @@ namespace Food.Infrastructure.Repositories
         public ICartRepository Carts { get; }
         public IAddressRepository Addresses { get; }
 
-        public ICartRepository Cart { get; }
 
         public UnitOfWork(FoodDbContext context,
                            IMenuRepository menuRepository,

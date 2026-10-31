@@ -24,7 +24,9 @@ namespace Food.Infrastructure.Repositories
 
         public async Task<IEnumerable<Order>> GetAllAsync()
         {
-            return await _context.Orders.ToListAsync();
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .ToListAsync();
         }
 
         public async Task<Order> GetOrderByIdAsync(int orderId)

@@ -44,15 +44,5 @@ namespace Food.Application.Services.Implementations
             }
 
         }
-
-        public async Task<bool> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
-        {
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user == null)
-            {
-                return false;
-            }
-            return await _userManager.CheckPasswordAsync(user, dto.Password);
-        }
     }
 }

@@ -10,7 +10,6 @@ namespace Food.Domain.Interfaces
         IOrderRepository Orders { get; }
         ICartRepository Carts { get; } 
         IAddressRepository Addresses { get; }
-        ICartRepository Cart { get; }
         
 
         Task<int> SaveAsync();

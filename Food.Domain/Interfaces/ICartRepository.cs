@@ -8,7 +8,8 @@ namespace Food.Domain.Interfaces
 
         public interface ICartRepository
         {
-            Task<Cart> GetCartByUserIdAsync(string userId); 
-            void ClearCart(Cart cart);
-        }
+        Task<Cart?> GetCartByUserIdAsync(string userId);
+        Task AddAsync(Cart cart);
+        void ClearCart(Cart cart);
+    }
     }

@@ -38,6 +38,14 @@ namespace Food.Application.Services.Implementations
 
         public async Task<OrderDTO> CreateOrderAsync(string userId, int addressId)
         {
+            var addresses = await _unitOfWork.Addresses.GetAddressesByUserIdAsync(userId);
+
+            if (!addresses.Any(a => a.Id == addressId))
+            {
+                throw new UnauthorizedAccessException(
+                    "The selected address does not belong to this user.");
+            }
+
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
 
             if (cart == null || !cart.CartItems.Any())
