@@ -15,19 +15,22 @@ namespace Food.Infrastructure.Repositories
         public IOrderRepository Orders { get; }
         public ICartRepository Carts { get; }
         public IAddressRepository Addresses { get; }
+        public IRestaurantRepository Restaurants { get; }
 
 
         public UnitOfWork(FoodDbContext context,
                            IMenuRepository menuRepository,
                            IOrderRepository orderRepository,
                            ICartRepository cartRepository,
-                           IAddressRepository addressRepository) 
+                           IAddressRepository addressRepository,
+                           IRestaurantRepository restaurantRepository) 
         {
             _context = context;
             Menu = menuRepository;
             Orders = orderRepository;
             Carts = cartRepository;     
-            Addresses = addressRepository; 
+            Addresses = addressRepository;
+            Restaurants = restaurantRepository;
 
             
         }

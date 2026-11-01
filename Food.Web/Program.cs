@@ -49,6 +49,7 @@ namespace Food.Web
             builder.Services.AddScoped<ICartService, CartService>();
             builder.Services.AddScoped<IMenuService, MenuService>();
             builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+            builder.Services.AddScoped<IRestaurantRepository, RestaurantRepository>();
 
 
 
