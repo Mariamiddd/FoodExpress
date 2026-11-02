@@ -11,6 +11,7 @@ namespace Food.Domain.Models.Entities
         public string Name { get; set; }
         public decimal Price { get; set; }
         public bool IsAvailable { get; set; }
+        public string? ImagePath { get; set; }
 
         // foreign keys so that we can navigate to the related entities
         public int RestaurantId { get; set; }

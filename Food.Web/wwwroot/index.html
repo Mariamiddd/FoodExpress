@@ -9,22 +9,30 @@
 <body>
     <div id="toast"></div>
 
-    <!-- AUTH SECTION -->
-    <div id="auth-section" class="container active-section">
-        <h1 class="logo">FoodExpress</h1>
-        <div class="card">
-            <div class="tabs">
-                <button class="tab active" onclick="toggleAuth('login')">Login</button>
-                <button class="tab" onclick="toggleAuth('register')">Register</button>
+    <!-- FLOATING LOGIN BUTTON -->
+    <button id="floating-auth-btn" class="floating-btn" onclick="toggleAuthModal()">
+        <span id="auth-btn-text">Login/Register</span>
+    </button>
+
+    <!-- AUTH MODAL -->
+    <div id="auth-modal" class="auth-modal" style="display: none;">
+        <div class="auth-modal-content">
+            <button class="close-btn" onclick="closeAuthModal()">&times;</button>
+
+            <div class="auth-modal-tabs">
+                <button class="tab active" onclick="toggleAuthTab('login')">Login</button>
+                <button class="tab" onclick="toggleAuthTab('register')">Register</button>
             </div>
 
-            <form id="login-form" onsubmit="handleLogin(event)">
+            <form id="login-form-modal" onsubmit="handleLogin(event)">
+                <h2>Login to FoodExpress</h2>
                 <input type="email" id="login-email" placeholder="Email" required>
                 <input type="password" id="login-password" placeholder="Password" required>
                 <button type="submit" class="btn-primary">Login</button>
             </form>
 
-            <form id="register-form" style="display: none;" onsubmit="handleRegister(event)">
+            <form id="register-form-modal" style="display: none;" onsubmit="handleRegister(event)">
+                <h2>Create Account</h2>
                 <input type="text" id="reg-username" placeholder="Username" required>
                 <input type="email" id="reg-email" placeholder="Email" required>
                 <input type="password" id="reg-password" placeholder="Password" required>
@@ -34,17 +42,24 @@
         </div>
     </div>
 
+    <!-- LOGIN BANNER (Shows when browsing but not logged in) -->
+    <div id="login-banner" class="login-banner" style="display: none;">
+        <p>Sign in to checkout and track your orders!</p>
+        <button onclick="toggleAuthModal()" class="btn-small">Login/Register</button>
+    </div>
+
     <!-- MAIN APP SECTION -->
-    <div id="app-section" class="container" style="display: none;">
+    <div id="app-section" class="container">
         <nav class="navbar">
             <h1 class="logo">FoodExpress</h1>
             <div class="nav-links">
                 <button onclick="showView('restaurants')">Restaurants</button>
-                <button onclick="showView('cart')">Cart</button>
-                <button onclick="showView('orders')">My Orders</button>
-                <button onclick="showView('profile')">Profile (Addresses)</button>
-                <button id="admin-nav-btn" onclick="showView('admin')" style="display:none;" class="btn-accent">Admin Panel</button>
-                <button onclick="logout()" class="btn-outline">Logout</button>
+                <button id="cart-nav-btn" onclick="showView('cart')" style="display: none;">Cart</button>
+                <button id="orders-nav-btn" onclick="showView('orders')" style="display: none;">My Orders</button>
+                <button id="profile-nav-btn" onclick="showView('profile')" style="display: none;">Profile</button>
+                <button id="admin-nav-btn" onclick="showView('admin')" style="display: none;" class="btn-accent">Admin</button>
+                <button id="logout-nav-btn" onclick="logout()" style="display: none;" class="btn-outline">Logout</button>
+                <button id="login-nav-btn" onclick="toggleAuthModal()" class="btn-primary">Login/Register</button>
             </div>
         </nav>
 
@@ -85,7 +100,17 @@
 
             <!-- PROFILE / ADDRESSES VIEW -->
             <div id="view-profile" class="view" style="display: none;">
-                <h2>My Addresses</h2>
+                <h2>My Profile</h2>
+                <div class="card">
+                    <h3>Profile Picture</h3>
+                    <div id="profile-image-container" style="margin-bottom: 15px;">
+                        <img id="profile-image-preview" src="" alt="Profile" style="max-width: 150px; max-height: 150px; border-radius: 50%; display: none;">
+                    </div>
+                    <input type="file" id="profile-image-input" accept="image/*" style="margin-bottom: 10px;">
+                    <button onclick="uploadProfileImage()" class="btn-primary">Upload Profile Image</button>
+                </div>
+
+                <h2 style="margin-top: 30px;">My Addresses</h2>
                 <div class="card">
                     <input type="text" id="addr-city" placeholder="City">
                     <input type="text" id="addr-street" placeholder="Street">
@@ -109,6 +134,12 @@
                             <button onclick="adminUpdateRestaurant()" class="btn-secondary">Update</button>
                             <button onclick="adminDeleteRestaurant()" class="btn-accent">Delete</button>
                         </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                            <h4>Upload Restaurant Image</h4>
+                            <input type="number" id="adm-rest-img-id" placeholder="Restaurant ID">
+                            <input type="file" id="adm-rest-image-input" accept="image/*">
+                            <button onclick="uploadRestaurantImage()" class="btn-primary">Upload Image</button>
+                        </div>
                     </div>
 
                     <!-- Manage Menu Items -->
@@ -124,6 +155,12 @@
                             <button onclick="adminAddMenuItem()" class="btn-primary">Add</button>
                             <button onclick="adminUpdateMenuItem()" class="btn-secondary">Update</button>
                             <button onclick="adminDeleteMenuItem()" class="btn-accent">Delete</button>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                            <h4>Upload Menu Item Image</h4>
+                            <input type="number" id="adm-menu-img-id" placeholder="Menu Item ID">
+                            <input type="file" id="adm-menu-image-input" accept="image/*">
+                            <button onclick="uploadMenuItemImage()" class="btn-primary">Upload Image</button>
                         </div>
                     </div>
 

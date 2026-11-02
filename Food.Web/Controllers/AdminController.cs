@@ -1,4 +1,5 @@
 ﻿using Food.Application.DTOs;
+using Food.Application.Services.Implementations;
 using Food.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,13 +12,16 @@ namespace Food.Web.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
+        private readonly ImageUploadService _imageUploadService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IWebHostEnvironment webHostEnvironment)
         {
             _adminService = adminService;
+            var uploadPath = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
+            _imageUploadService = new ImageUploadService(uploadPath);
         }
 
-        [HttpPost("restaurant")]
+        [HttpPost("restaurants")]
         public async Task<IActionResult> AddRestaurant([FromBody] CreateRestaurantDTO dto)
         {
         
@@ -33,7 +37,7 @@ namespace Food.Web.Controllers
            
         }
 
-        [HttpPut("restaurant/{id}")]
+        [HttpPut("restaurants/{id}")]
         public async Task<IActionResult> UpdateRestaurant(int id, [FromBody] UpdateRestaurantDTO dto)
         {
             if (id != dto.Id)
@@ -68,7 +72,7 @@ namespace Food.Web.Controllers
             });
         }
 
-        [HttpDelete("restaurant/{id}")]
+        [HttpDelete("restaurants/{id}")]
         public async Task<IActionResult> DeleteRestaurant(int id)
         {
             var success = await _adminService.DeleteRestaurantAsync(id);
@@ -92,7 +96,7 @@ namespace Food.Web.Controllers
             });
         }
 
-        [HttpPost("menuitem")]
+        [HttpPost("menuitems")]
         public async Task<IActionResult> AddMenuItem([FromBody] CreateMenuItemDTO dto)
         {
             var id = await _adminService.AddMenuItemAsync(dto);
@@ -108,7 +112,7 @@ namespace Food.Web.Controllers
             return CreatedAtAction(nameof(AddMenuItem), new { id }, response);
         }
 
-        [HttpPut("menuitem/{id}")]
+        [HttpPut("menuitems/{id}")]
         public async Task<IActionResult> UpdateMenuItem(int id, [FromBody] UpdateMenuItemDTO dto)
         {
             if (id != dto.Id)
@@ -143,7 +147,7 @@ namespace Food.Web.Controllers
             });
         }
 
-        [HttpDelete("menuitem/{id}")]
+        [HttpDelete("menuitems/{id}")]
         public async Task<IActionResult> DeleteMenuItem(int id)
         {
             var success = await _adminService.DeleteMenuItemAsync(id);
@@ -167,7 +171,7 @@ namespace Food.Web.Controllers
             });
         }
 
-        [HttpPost("category")]
+        [HttpPost("categories")]
         public async Task<IActionResult> AddCategory([FromBody] CreateCategoryDTO dto)
         {
             var id = await _adminService.AddCategoryAsync(dto);
@@ -181,6 +185,155 @@ namespace Food.Web.Controllers
             };
 
             return CreatedAtAction(nameof(AddCategory), new { id }, response);
+        }
+
+        [HttpPost("restaurants/{id}/image")]
+        public async Task<IActionResult> UploadRestaurantImage(int id, IFormFile image)
+        {
+            if (image == null || image.Length == 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "No image file provided",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+
+            try
+            {
+                // Validate image
+                var validationResult = _imageUploadService.ValidateImage(
+                    image.OpenReadStream(),
+                    image.FileName,
+                    image.ContentType);
+
+                if (!validationResult.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = validationResult.Message,
+                        Data = (object?)null,
+                        Errors = (Dictionary<string, string[]>?)null
+                    });
+                }
+
+                // Save image
+                var relativePath = await _imageUploadService.SaveImageAsync(
+                    image.OpenReadStream(),
+                    image.FileName,
+                    "restaurants");
+
+                // Update restaurant with image path
+                var updateDto = new UpdateRestaurantDTO { Id = id, ImagePath = relativePath };
+                var success = await _adminService.UpdateRestaurantImageAsync(id, relativePath);
+
+                if (!success)
+                {
+                    _imageUploadService.DeleteImage(relativePath);
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Restaurant not found",
+                        Data = (object?)null,
+                        Errors = (Dictionary<string, string[]>?)null
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Restaurant image uploaded successfully",
+                    Data = new { ImagePath = relativePath },
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+        }
+
+        [HttpPost("menuitems/{id}/image")]
+        public async Task<IActionResult> UploadMenuItemImage(int id, IFormFile image)
+        {
+            if (image == null || image.Length == 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "No image file provided",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+
+            try
+            {
+                // Validate image
+                var validationResult = _imageUploadService.ValidateImage(
+                    image.OpenReadStream(),
+                    image.FileName,
+                    image.ContentType);
+
+                if (!validationResult.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = validationResult.Message,
+                        Data = (object?)null,
+                        Errors = (Dictionary<string, string[]>?)null
+                    });
+                }
+
+                // Save image
+                var relativePath = await _imageUploadService.SaveImageAsync(
+                    image.OpenReadStream(),
+                    image.FileName,
+                    "menu-items");
+
+                // Update menu item with image path
+                var success = await _adminService.UpdateMenuItemImageAsync(id, relativePath);
+
+                if (!success)
+                {
+                    _imageUploadService.DeleteImage(relativePath);
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Menu item not found",
+                        Data = (object?)null,
+                        Errors = (Dictionary<string, string[]>?)null
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Menu item image uploaded successfully",
+                    Data = new { ImagePath = relativePath },
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
         }
     }
 }

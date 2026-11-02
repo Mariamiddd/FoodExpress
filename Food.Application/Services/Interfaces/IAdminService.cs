@@ -19,5 +19,9 @@ namespace Food.Application.Services.Interfaces
 
         // Category operations
         Task<int> AddCategoryAsync(CreateCategoryDTO dto);
+
+        // Image operations
+        Task<bool> UpdateRestaurantImageAsync(int restaurantId, string imagePath);
+        Task<bool> UpdateMenuItemImageAsync(int menuItemId, string imagePath);
     }
 }

@@ -32,22 +32,30 @@ namespace Food.Application.Services.Implementations
 
         public async Task<AuthResponseDTO> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Login attempt for email: {Email}", dto.Email);
-
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-
-            if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
+            try
             {
-                _logger.LogWarning("Failed login attempt for email: {Email} - invalid credentials", dto.Email);
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                _logger.LogInformation("Login attempt for email: {Email}", dto.Email);
+
+                var user = await _userManager.FindByEmailAsync(dto.Email);
+
+                if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
+                {
+                    _logger.LogWarning("Failed login attempt for email: {Email} - invalid credentials", dto.Email);
+                    return null; // Return null instead of throwing
+                }
+
+                var userRoles = await _userManager.GetRolesAsync(user);
+                var response = GenerateJwtToken(user, userRoles);
+
+                _logger.LogInformation("Successful login for user: {UserId} with roles: {Roles}", user.Id, string.Join(", ", userRoles));
+
+                return response;
             }
-
-            var userRoles = await _userManager.GetRolesAsync(user);
-            var response = GenerateJwtToken(user, userRoles);
-
-            _logger.LogInformation("Successful login for user: {UserId} with roles: {Roles}", user.Id, string.Join(", ", userRoles));
-
-            return response;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login for email: {Email}", dto.Email);
+                return null;
+            }
 
         }
 
@@ -66,7 +74,7 @@ namespace Food.Application.Services.Implementations
             new Claim(ClaimTypes.Name, user.UserName)
         };
 
-            //injecting roles into the claims
+            // Injecting roles into the claims
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
@@ -87,7 +95,10 @@ namespace Food.Application.Services.Implementations
             return new AuthResponseDTO
             {
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
-                ExpiresAt = expiresAt
+                ExpiresAt = expiresAt,
+                UserId = user.Id,
+                Email = user.Email,
+                UserName = user.UserName
             };
         }
 

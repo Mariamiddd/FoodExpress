@@ -1,41 +1,77 @@
 ﻿using Food.Domain.Interfaces;
 using Food.Domain.Models.Entities;
+using Food.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Food.Infrastructure.Repositories
 {
     public class RestaurantRepository : IRestaurantRepository
     {
-        public Task AddAsync(Restaurant restaurant)
+        private readonly FoodDbContext _context;
+
+        public RestaurantRepository(FoodDbContext context)
         {
-            throw new NotImplementedException();
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public Task DeleteAsync(int id)
+        public async Task<IEnumerable<Restaurant>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return await _context.Restaurants
+                .Include(r => r.MenuItems)
+                .ToListAsync();
         }
 
-        public Task<IEnumerable<Restaurant>> GetAllAsync()
+        public async Task<Restaurant> GetByIdAsync(int id)
         {
-            throw new NotImplementedException();
+            return await _context.Restaurants
+                .Include(r => r.MenuItems)
+                    .ThenInclude(m => m.Category)
+                .FirstOrDefaultAsync(r => r.Id == id);
         }
 
-        public Task<Restaurant> GetByIdAsync(int id)
+        public async Task AddAsync(Restaurant restaurant)
         {
-            throw new NotImplementedException();
+            if (restaurant == null)
+                throw new ArgumentNullException(nameof(restaurant));
+
+            await _context.Restaurants.AddAsync(restaurant);
+            await _context.SaveChangesAsync();
         }
 
-        public Task<IEnumerable<Restaurant>> SearchAsync(string searchTerm)
+        public async Task UpdateAsync(Restaurant restaurant)
         {
-            throw new NotImplementedException();
+            if (restaurant == null)
+                throw new ArgumentNullException(nameof(restaurant));
+
+            _context.Restaurants.Update(restaurant);
+            await _context.SaveChangesAsync();
         }
 
-        public Task UpdateAsync(Restaurant restaurant)
+        public async Task DeleteAsync(int id)
         {
-            throw new NotImplementedException();
+            var restaurant = await _context.Restaurants.FirstOrDefaultAsync(r => r.Id == id);
+            if (restaurant != null)
+            {
+                _context.Restaurants.Remove(restaurant);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<IEnumerable<Restaurant>> SearchAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return await _context.Restaurants
+                    .Include(r => r.MenuItems)
+                    .ToListAsync();
+
+            return await _context.Restaurants
+                .Where(r => r.Name.Contains(searchTerm) || r.Address.Contains(searchTerm))
+                .Include(r => r.MenuItems)
+                .ToListAsync();
         }
     }
 }

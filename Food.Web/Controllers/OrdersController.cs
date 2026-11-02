@@ -99,6 +99,7 @@ namespace Food.Web.Controllers
 
         // update order status for admin users patch request
         [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequestDTO request)
         {
             var success = await _orderService.UpdateOrderStatusAsync(id, request.Status);

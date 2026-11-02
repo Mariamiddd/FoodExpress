@@ -22,39 +22,75 @@ namespace Food.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterDTO dto, CancellationToken cancellationToken)
         {
-            await _usersService.RegisterUserAsync(dto, cancellationToken);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "User registered successfully",
-                Data = (object?)null,
-                Errors = (Dictionary<string, string[]>?)null
-            });
+                await _usersService.RegisterUserAsync(dto, cancellationToken);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "User registered successfully",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred during registration",
+                    Data = ex.Message,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginDTO dto, CancellationToken cancellationToken)
         {
-            var result = await _authService.LoginUserAsync(dto, cancellationToken);
-            if (result == null)
+            try
             {
-                return Unauthorized(new
+                var result = await _authService.LoginUserAsync(dto, cancellationToken);
+                if (result == null)
                 {
-                    Success = false,
-                    Message = "Invalid email or password",
-                    Data = (object?)null,
+                    return Unauthorized(new
+                    {
+                        Success = false,
+                        Message = "Invalid email or password",
+                        Data = (object?)null,
+                        Errors = (Dictionary<string, string[]>?)null
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Login successful",
+                    Data = result,
                     Errors = (Dictionary<string, string[]>?)null
                 });
             }
-
-            return Ok(new
+            catch (Exception ex)
             {
-                Success = true,
-                Message = "Login successful",
-                Data = result, // This will contain the JWT token and user info
-                Errors = (Dictionary<string, string[]>?)null
-            });
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An unexpected error occurred during login",
+                    Data = ex.Message,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
         }
     }
 }

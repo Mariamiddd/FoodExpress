@@ -10,5 +10,6 @@ namespace Food.Domain.Models.Identity
     {
         public Cart Cart { get; set; }
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+        public string? ProfileImagePath { get; set; }
     }
 }

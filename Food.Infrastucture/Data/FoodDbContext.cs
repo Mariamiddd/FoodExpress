@@ -80,6 +80,9 @@ namespace Food.Infrastructure.Data
             modelBuilder.Entity<Address>()
                 .HasIndex(a => a.UserId);
 
+            modelBuilder.Entity<Cart>()
+                .HasIndex(c => c.UserId);
+
             // configure relationships between entities
             modelBuilder.Entity<Address>()
                 .HasOne(a => a.User)
@@ -158,9 +161,9 @@ namespace Food.Infrastructure.Data
 
             // Seed Restaurants
             modelBuilder.Entity<Restaurant>().HasData(
-                new Restaurant { Id = 1, Name = "Pizza Palace", Address = "123 Main St" },
-                new Restaurant { Id = 2, Name = "Burger Heaven", Address = "456 Oak Ave" },
-                new Restaurant { Id = 3, Name = "Sushi Paradise", Address = "789 River Rd" }
+                new Restaurant { Id = 1, Name = "Pizza Palace", Address = "123 Main St", ImagePath = null },
+                new Restaurant { Id = 2, Name = "Burger Heaven", Address = "456 Oak Ave", ImagePath = null },
+                new Restaurant { Id = 3, Name = "Sushi Paradise", Address = "789 River Rd", ImagePath = null }
             );
 
             // Seed Menu Items

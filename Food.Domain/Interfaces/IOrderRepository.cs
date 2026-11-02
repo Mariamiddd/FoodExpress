@@ -9,6 +9,7 @@ namespace Food.Domain.Interfaces
     {
         Task<Order> GetOrderByIdAsync(int orderId);
         Task<IEnumerable<Order>> GetAllAsync();
+        Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId);
         Task AddAsync(Order order);
         Task UpdateAsync(Order order);
     }

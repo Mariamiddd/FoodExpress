@@ -198,33 +198,54 @@ button {
 /* Toast Notifications */
 #toast {
     visibility: hidden;
-    min-width: 250px;
+    min-width: 300px;
+    max-width: 500px;
     background-color: var(--secondary-color);
     color: #fff;
     text-align: center;
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 16px 20px;
     position: fixed;
-    z-index: 1;
+    z-index: 1001;
     right: 30px;
     bottom: 30px;
-    box-shadow: var(--shadow);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    font-weight: 500;
+    border-left: 4px solid var(--secondary-color);
+    animation: none;
 }
 
     #toast.show {
         visibility: visible;
-        animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        animation: fadein 0.5s, fadeout 0.5s 4s;
+    }
+
+    #toast.success {
+        background-color: #4CAF50;
+        border-left-color: #2E7D32;
+    }
+
+    #toast.error {
+        background-color: #f44336;
+        border-left-color: #c62828;
+    }
+
+    #toast.info {
+        background-color: var(--secondary-color);
+        border-left-color: var(--secondary-color);
     }
 
 @keyframes fadein {
     from {
         bottom: 0;
         opacity: 0;
+        transform: translateX(20px);
     }
 
     to {
         bottom: 30px;
         opacity: 1;
+        transform: translateX(0);
     }
 }
 
@@ -232,11 +253,13 @@ button {
     from {
         bottom: 30px;
         opacity: 1;
+        transform: translateX(0);
     }
 
     to {
         bottom: 0;
         opacity: 0;
+        transform: translateX(20px);
     }
 }
 
@@ -244,4 +267,206 @@ button {
 #auth-section {
     max-width: 450px;
     margin-top: 10vh;
+}
+
+/* Floating Auth Button */
+.floating-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: var(--white);
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .floating-btn:hover {
+        background-color: var(--primary-hover);
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .floating-btn #auth-btn-text {
+        text-align: center;
+        line-height: 1.2;
+        font-size: 11px;
+    }
+
+/* Auth Modal */
+.auth-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.auth-modal-content {
+    background-color: var(--white);
+    padding: 40px 30px;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 450px;
+    width: 90%;
+    position: relative;
+}
+
+    .auth-modal-content .close-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .auth-modal-content .close-btn:hover {
+        color: var(--text-main);
+    }
+
+/* Auth Modal Tabs */
+.auth-modal-tabs {
+    display: flex;
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+    .auth-modal-tabs .tab {
+        flex: 1;
+        background: none;
+        color: var(--text-light);
+        padding: 12px;
+        border-radius: 0;
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .auth-modal-tabs .tab.active {
+        border-bottom: 3px solid var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .auth-modal-tabs .tab:hover {
+        color: var(--primary-color);
+    }
+
+#login-form-modal h2,
+#register-form-modal h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.3rem;
+}
+
+#login-form-modal input,
+#register-form-modal input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 14px;
+}
+
+#login-form-modal button,
+#register-form-modal button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+}
+
+/* Login Banner */
+.login-banner {
+    background-color: #FFF3E0;
+    border-left: 4px solid var(--accent-color);
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .login-banner p {
+        margin: 0;
+        color: var(--text-main);
+        font-weight: 500;
+    }
+
+    .login-banner .btn-small {
+        padding: 8px 16px;
+        font-size: 14px;
+        white-space: nowrap;
+        margin-left: 15px;
+    }
+
+/* Search Bar */
+.search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+    .search-bar input {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .search-bar button {
+        flex-shrink: 0;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .floating-btn {
+        width: 50px;
+        height: 50px;
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .auth-modal-content {
+        width: 95%;
+        padding: 30px 20px;
+    }
+
+    .login-banner {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .login-banner .btn-small {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .search-bar {
+        flex-direction: column;
+    }
+
+    .search-bar input,
+    .search-bar button {
+        width: 100%;
+    }
 }

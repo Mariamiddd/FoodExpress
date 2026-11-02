@@ -19,6 +19,7 @@ namespace Food.Infrastructure.Repositories
 
         public async Task AddAsync(Order order)
         {
+            // Explicitly add the order - EF Core will cascade and add OrderItems
             await _context.Orders.AddAsync(order);
         }
 
@@ -26,14 +27,26 @@ namespace Food.Infrastructure.Repositories
         {
             return await _context.Orders
                 .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
                 .ToListAsync();
         }
 
         public async Task<Order> GetOrderByIdAsync(int orderId)
         {
-            
-            return await _context.Orders.Include(o => o.OrderItems)
+
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
+        }
+
+        public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId)
+        {
+            return await _context.Orders
+                .Where(o => o.UserId == userId)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .ToListAsync();
         }
 
         public Task UpdateAsync(Order order)

@@ -1,0 +1,24 @@
+<!-- HOW TO UPDATE index.html -->
+<!-- FIND THIS SECTION (near the end of index.html): -->
+
+                </div>
+            </div>
+
+            <!-- ADMIN VIEW -->
+            <div id="view-admin" class="view" style="display: none;">
+                <h2>Admin Dashboard</h2>
+                <div class="grid">
+                    <!-- ... admin content ... -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- ADD THESE TWO LINES HERE (before </body>): -->
+
+    <script src="script.js"></script>
+    <script src="script-cart-functions.js"></script>
+</body>
+</html>
+
+<!-- NOTE: The order matters! script.js MUST load first, then script-cart-functions.js -->

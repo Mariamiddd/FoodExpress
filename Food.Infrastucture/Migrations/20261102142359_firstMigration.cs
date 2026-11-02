@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Food.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class migradded : Migration
+    public partial class firstMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,6 +32,7 @@ namespace Food.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProfileImagePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -72,7 +73,8 @@ namespace Food.Infrastructure.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ImagePath = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -235,6 +237,7 @@ namespace Food.Infrastructure.Migrations
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: false),
+                    ImagePath = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RestaurantId = table.Column<int>(type: "int", nullable: false),
                     CategoryId = table.Column<int>(type: "int", nullable: false)
                 },
@@ -363,31 +366,31 @@ namespace Food.Infrastructure.Migrations
 
             migrationBuilder.InsertData(
                 table: "Restaurants",
-                columns: new[] { "Id", "Address", "Name" },
+                columns: new[] { "Id", "Address", "ImagePath", "Name" },
                 values: new object[,]
                 {
-                    { 1, "123 Main St", "Pizza Palace" },
-                    { 2, "456 Oak Ave", "Burger Heaven" },
-                    { 3, "789 River Rd", "Sushi Paradise" }
+                    { 1, "123 Main St", "/images/pizza-palace.jpg", "Pizza Palace" },
+                    { 2, "456 Oak Ave", "/images/burger-heaven.jpg", "Burger Heaven" },
+                    { 3, "789 River Rd", "/images/sushi-paradise.jpg", "Sushi Paradise" }
                 });
 
             migrationBuilder.InsertData(
                 table: "MenuItems",
-                columns: new[] { "Id", "CategoryId", "IsAvailable", "Name", "Price", "RestaurantId" },
+                columns: new[] { "Id", "CategoryId", "ImagePath", "IsAvailable", "Name", "Price", "RestaurantId" },
                 values: new object[,]
                 {
-                    { 1, 1, true, "Garlic Bread", 5.99m, 1 },
-                    { 2, 2, true, "Margherita Pizza", 12.99m, 1 },
-                    { 3, 2, true, "Pepperoni Pizza", 14.99m, 1 },
-                    { 4, 3, true, "Tiramisu", 6.99m, 1 },
-                    { 5, 1, true, "French Fries", 4.99m, 2 },
-                    { 6, 2, true, "Classic Burger", 10.99m, 2 },
-                    { 7, 2, true, "Double Cheeseburger", 13.99m, 2 },
-                    { 8, 4, true, "Coca Cola", 2.99m, 2 },
-                    { 9, 1, true, "Edamame", 6.99m, 3 },
-                    { 10, 2, true, "California Roll", 11.99m, 3 },
-                    { 11, 2, true, "Spicy Tuna Roll", 13.99m, 3 },
-                    { 12, 5, true, "Seaweed Salad", 8.99m, 3 }
+                    { 1, 1, null, true, "Garlic Bread", 5.99m, 1 },
+                    { 2, 2, null, true, "Margherita Pizza", 12.99m, 1 },
+                    { 3, 2, null, true, "Pepperoni Pizza", 14.99m, 1 },
+                    { 4, 3, null, true, "Tiramisu", 6.99m, 1 },
+                    { 5, 1, null, true, "French Fries", 4.99m, 2 },
+                    { 6, 2, null, true, "Classic Burger", 10.99m, 2 },
+                    { 7, 2, null, true, "Double Cheeseburger", 13.99m, 2 },
+                    { 8, 4, null, true, "Coca Cola", 2.99m, 2 },
+                    { 9, 1, null, true, "Edamame", 6.99m, 3 },
+                    { 10, 2, null, true, "California Roll", 11.99m, 3 },
+                    { 11, 2, null, true, "Spicy Tuna Roll", 13.99m, 3 },
+                    { 12, 5, null, true, "Seaweed Salad", 8.99m, 3 }
                 });
 
             migrationBuilder.CreateIndex(

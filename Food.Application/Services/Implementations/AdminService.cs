@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Food.Application.DTOs
+namespace Food.Application.Services.Implementations
 {
     public class AdminService : IAdminService
     {
@@ -91,6 +91,29 @@ namespace Food.Application.DTOs
             await _context.Categories.AddAsync(category);
             await _context.SaveChangesAsync();
             return category.Id;
+        }
+
+        // Image operations
+        public async Task<bool> UpdateRestaurantImageAsync(int restaurantId, string imagePath)
+        {
+            var restaurant = await _context.Restaurants.FindAsync(restaurantId);
+            if (restaurant == null) return false;
+
+            restaurant.ImagePath = imagePath;
+            _context.Restaurants.Update(restaurant);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateMenuItemImageAsync(int menuItemId, string imagePath)
+        {
+            var menuItem = await _context.MenuItems.FindAsync(menuItemId);
+            if (menuItem == null) return false;
+
+            menuItem.ImagePath = imagePath;
+            _context.MenuItems.Update(menuItem);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

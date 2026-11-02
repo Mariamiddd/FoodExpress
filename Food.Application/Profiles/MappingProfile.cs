@@ -25,28 +25,29 @@ namespace Food.Application.Profiles
 
             //order mappings
             CreateMap<Order, OrderDTO>()
-    .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-    .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
-    .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems));
+
+            CreateMap<OrderItem, OrderItemDTO>();
 
             // created mappings for Restaurant and MenuItem
             CreateMap<CreateRestaurantDTO, Restaurant>();
             CreateMap<CreateMenuItemDTO, MenuItem>();
 
-            //categoru
+            //category
             CreateMap<CreateCategoryDTO, Category>();
-
 
             ///
             CreateMap<MenuItem, MenuItemDTO>()
-    .ForMember(dest => dest.RestaurantName,
-        opt => opt.MapFrom(src => src.Restaurant.Name))
-    .ForMember(dest => dest.CategoryName,
-        opt => opt.MapFrom(src => src.Category.Name));
+                .ForMember(dest => dest.RestaurantName,
+                    opt => opt.MapFrom(src => src.Restaurant.Name))
+                .ForMember(dest => dest.CategoryName,
+                    opt => opt.MapFrom(src => src.Category.Name));
 
-            CreateMap<Restaurant, RestaurantDTO>();
-
-            CreateMap<OrderItem, OrderItemDTO>();
+            CreateMap<Restaurant, RestaurantDTO>()
+                .ForMember(dest => dest.MenuItems, opt => opt.MapFrom(src => src.MenuItems));
         }
 
 

@@ -19,7 +19,10 @@ namespace Food.Infrastructure.Repositories
 
         public async Task<MenuItem> GetByIdAsync(int id)
         {
-            return await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == id);
+            return await _context.MenuItems
+                   .Include(m => m.Restaurant)
+                   .Include(m => m.Category)
+                   .FirstOrDefaultAsync(m => m.Id == id);
         }
 
         public async Task<IEnumerable<MenuItem>> GetAllAsync()

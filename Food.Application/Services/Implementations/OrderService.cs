@@ -38,9 +38,8 @@ namespace Food.Application.Services.Implementations
         public async Task<IEnumerable<OrderDTO>> GetUserOrdersAsync(string userId)
         {
             _logger.LogInformation("Retrieving orders for user: {UserId}", userId);
-            var orders = await _unitOfWork.Orders.GetAllAsync();
-            var userOrders = orders.Where(o => o.UserId == userId);
-            return _mapper.Map<IEnumerable<OrderDTO>>(userOrders);
+            var orders = await _unitOfWork.Orders.GetOrdersByUserIdAsync(userId);
+            return _mapper.Map<IEnumerable<OrderDTO>>(orders);
         }
 
         public async Task<OrderDTO> CreateOrderAsync(string userId, int addressId)
@@ -76,7 +75,8 @@ namespace Food.Application.Services.Implementations
                 UserId = userId,
                 AddressId = addressId,
                 RestaurantId = restaurantIds.First(),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                Status = OrderState.Created
             };
 
             decimal total = 0;
@@ -84,14 +84,15 @@ namespace Food.Application.Services.Implementations
             {
                 // UnitPrice is set to the current price of the MenuItem at the time of order creation
                 var unitPrice = cartItem.MenuItem.Price;
-                order.OrderItems.Add(new OrderItem
+                var orderItem = new OrderItem
                 {
                     MenuItemId = cartItem.MenuItemId,
                     Quantity = cartItem.Quantity,
                     UnitPrice = unitPrice,
                     PriceAtTimeOfOrder = unitPrice,
                     Name = cartItem.MenuItem.Name
-                });
+                };
+                order.OrderItems.Add(orderItem);
                 total += (unitPrice * cartItem.Quantity);
             }
 
