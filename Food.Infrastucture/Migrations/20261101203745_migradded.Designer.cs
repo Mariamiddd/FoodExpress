@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Food.Infrastructure.Migrations
 {
     [DbContext(typeof(FoodDbContext))]
-    [Migration("20261022064238_withIdentity")]
-    partial class withIdentity
+    [Migration("20261101203745_migradded")]
+    partial class migradded
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -41,8 +41,9 @@ namespace Food.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -62,8 +63,9 @@ namespace Food.Infrastructure.Migrations
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -117,6 +119,33 @@ namespace Food.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Categories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Appetizers"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Main Courses"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Desserts"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Beverages"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Salads"
+                        });
                 });
 
             modelBuilder.Entity("Food.Domain.Models.Entities.MenuItem", b =>
@@ -129,14 +158,6 @@ namespace Food.Infrastructure.Migrations
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Details")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
@@ -158,6 +179,116 @@ namespace Food.Infrastructure.Migrations
                     b.HasIndex("RestaurantId");
 
                     b.ToTable("MenuItems");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CategoryId = 1,
+                            IsAvailable = true,
+                            Name = "Garlic Bread",
+                            Price = 5.99m,
+                            RestaurantId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CategoryId = 2,
+                            IsAvailable = true,
+                            Name = "Margherita Pizza",
+                            Price = 12.99m,
+                            RestaurantId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CategoryId = 2,
+                            IsAvailable = true,
+                            Name = "Pepperoni Pizza",
+                            Price = 14.99m,
+                            RestaurantId = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CategoryId = 3,
+                            IsAvailable = true,
+                            Name = "Tiramisu",
+                            Price = 6.99m,
+                            RestaurantId = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CategoryId = 1,
+                            IsAvailable = true,
+                            Name = "French Fries",
+                            Price = 4.99m,
+                            RestaurantId = 2
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CategoryId = 2,
+                            IsAvailable = true,
+                            Name = "Classic Burger",
+                            Price = 10.99m,
+                            RestaurantId = 2
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CategoryId = 2,
+                            IsAvailable = true,
+                            Name = "Double Cheeseburger",
+                            Price = 13.99m,
+                            RestaurantId = 2
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CategoryId = 4,
+                            IsAvailable = true,
+                            Name = "Coca Cola",
+                            Price = 2.99m,
+                            RestaurantId = 2
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CategoryId = 1,
+                            IsAvailable = true,
+                            Name = "Edamame",
+                            Price = 6.99m,
+                            RestaurantId = 3
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CategoryId = 2,
+                            IsAvailable = true,
+                            Name = "California Roll",
+                            Price = 11.99m,
+                            RestaurantId = 3
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CategoryId = 2,
+                            IsAvailable = true,
+                            Name = "Spicy Tuna Roll",
+                            Price = 13.99m,
+                            RestaurantId = 3
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CategoryId = 5,
+                            IsAvailable = true,
+                            Name = "Seaweed Salad",
+                            Price = 8.99m,
+                            RestaurantId = 3
+                        });
                 });
 
             modelBuilder.Entity("Food.Domain.Models.Entities.Order", b =>
@@ -183,8 +314,9 @@ namespace Food.Infrastructure.Migrations
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -252,37 +384,29 @@ namespace Food.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Restaurants");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Address = "123 Main St",
+                            Name = "Pizza Palace"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Address = "456 Oak Ave",
+                            Name = "Burger Heaven"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Address = "789 River Rd",
+                            Name = "Sushi Paradise"
+                        });
                 });
 
-            modelBuilder.Entity("Food.Domain.Models.Entities.User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Password")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("User");
-                });
-
-            modelBuilder.Entity("Food.Infrastructure.Identity.ApplicationUser", b =>
+            modelBuilder.Entity("Food.Domain.Models.Identity.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -336,6 +460,10 @@ namespace Food.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("[Email] IS NOT NULL");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -343,6 +471,10 @@ namespace Food.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("UserName")
+                        .IsUnique()
+                        .HasFilter("[UserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -482,7 +614,7 @@ namespace Food.Infrastructure.Migrations
 
             modelBuilder.Entity("Food.Domain.Models.Entities.Address", b =>
                 {
-                    b.HasOne("Food.Domain.Models.Entities.User", "User")
+                    b.HasOne("Food.Domain.Models.Identity.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -493,7 +625,7 @@ namespace Food.Infrastructure.Migrations
 
             modelBuilder.Entity("Food.Domain.Models.Entities.Cart", b =>
                 {
-                    b.HasOne("Food.Domain.Models.Entities.User", "User")
+                    b.HasOne("Food.Domain.Models.Identity.ApplicationUser", "User")
                         .WithOne("Cart")
                         .HasForeignKey("Food.Domain.Models.Entities.Cart", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -551,10 +683,10 @@ namespace Food.Infrastructure.Migrations
                     b.HasOne("Food.Domain.Models.Entities.Restaurant", "Restaurant")
                         .WithMany("Orders")
                         .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Food.Domain.Models.Entities.User", "User")
+                    b.HasOne("Food.Domain.Models.Identity.ApplicationUser", "User")
                         .WithMany("Orders")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -597,7 +729,7 @@ namespace Food.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("Food.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("Food.Domain.Models.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -606,7 +738,7 @@ namespace Food.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("Food.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("Food.Domain.Models.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -621,7 +753,7 @@ namespace Food.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Food.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("Food.Domain.Models.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -630,7 +762,7 @@ namespace Food.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("Food.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("Food.Domain.Models.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -659,7 +791,7 @@ namespace Food.Infrastructure.Migrations
                     b.Navigation("Orders");
                 });
 
-            modelBuilder.Entity("Food.Domain.Models.Entities.User", b =>
+            modelBuilder.Entity("Food.Domain.Models.Identity.ApplicationUser", b =>
                 {
                     b.Navigation("Cart")
                         .IsRequired();

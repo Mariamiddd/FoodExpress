@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Food.Application.DTOs
@@ -11,9 +12,12 @@ namespace Food.Application.DTOs
         public int RestaurantId { get; set; }
         public int AddressId { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        [DataType(DataType.Currency)]
         public decimal TotalPrice { get; set; }
+
         public string Status { get; set; }
-        public List<OrderItemDTO> OrderItems { get; set; }
+        public List<OrderItemDTO> OrderItems { get; set; } = new List<OrderItemDTO>();
     }
 
     public class OrderItemDTO
@@ -22,6 +26,14 @@ namespace Food.Application.DTOs
         public int MenuItemId { get; set; }
         public string Name { get; set; }
         public int Quantity { get; set; }
+
+        [DataType(DataType.Currency)]
         public decimal UnitPrice { get; set; }
+
+        [DataType(DataType.Currency)]
+        public decimal PriceAtTimeOfOrder { get; set; }
+
+        [DataType(DataType.Currency)]
+        public decimal LineTotal => Quantity * UnitPrice;
     }
 }

@@ -3,6 +3,7 @@ using Food.Application.Interfaces;
 using Food.Domain.Models.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
@@ -17,25 +18,36 @@ namespace Food.Application.Services.Implementations
 
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<AuthService> _logger;
 
 
         public AuthService(IConfiguration configuration,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            ILogger<AuthService> logger)
         {
             _configuration = configuration;
             _userManager = userManager;
+            _logger = logger;
         }
 
         public async Task<AuthResponseDTO> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("Login attempt for email: {Email}", dto.Email);
+
             var user = await _userManager.FindByEmailAsync(dto.Email);
 
             if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             {
+                _logger.LogWarning("Failed login attempt for email: {Email} - invalid credentials", dto.Email);
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
+
             var userRoles = await _userManager.GetRolesAsync(user);
-            return GenerateJwtToken(user, userRoles);
+            var response = GenerateJwtToken(user, userRoles);
+
+            _logger.LogInformation("Successful login for user: {UserId} with roles: {Roles}", user.Id, string.Join(", ", userRoles));
+
+            return response;
 
         }
 

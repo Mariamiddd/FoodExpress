@@ -17,137 +17,170 @@ namespace Food.Web.Controllers
             _adminService = adminService;
         }
 
-
-        // post , put, delete methods for restaurant management
-        //post method for creating a new restaurant
         [HttpPost("restaurant")]
         public async Task<IActionResult> AddRestaurant([FromBody] CreateRestaurantDTO dto)
         {
-            try
-            {
+        
                 var id = await _adminService.AddRestaurantAsync(dto);
-                return CreatedAtAction(nameof(AddRestaurant), new { id }, new { Message = "რესტორანი წარმატებით შეიქმნა", RestaurantId = id });
-            }
-            catch (Exception ex)
+            var response = new
             {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Restaurant created successfully",
+                Data = new { RestaurantId = id },
+                Errors = (Dictionary<string, string[]>?)null
+            };
+                return CreatedAtAction(nameof(AddRestaurant), new { id }, new { Message = "Restaurant created successfully", RestaurantId = id });
+           
         }
-
-        // put method for updating an existing restaurant
 
         [HttpPut("restaurant/{id}")]
         public async Task<IActionResult> UpdateRestaurant(int id, [FromBody] UpdateRestaurantDTO dto)
         {
-            try
+            if (id != dto.Id)
             {
-                if (id != dto.Id)
-                    return BadRequest(new { message = "არ ემთხვევა რესტორნის ID-ი" });
-
-                var success = await _adminService.UpdateRestaurantAsync(dto);
-                if (!success)
-                    return NotFound(new { message = "რესტორანი ვერ მოიძებნა" });
-
-                return NoContent();
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Restaurant ID mismatch",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
-            catch (Exception ex)
+
+            var success = await _adminService.UpdateRestaurantAsync(dto);
+            if (!success)
             {
-                return BadRequest(new { message = ex.Message });
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Restaurant not found",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Restaurant updated successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
-
-        // delete method for deleting a restaurant
 
         [HttpDelete("restaurant/{id}")]
         public async Task<IActionResult> DeleteRestaurant(int id)
         {
-            try
+            var success = await _adminService.DeleteRestaurantAsync(id);
+            if (!success)
             {
-                var success = await _adminService.DeleteRestaurantAsync(id);
-                if (!success)
-                    return NotFound(new { message = "რესტორანი ვერ მოიძებნა" });
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Restaurant not found",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
 
-                return NoContent();
-            }
-            catch (Exception ex)
+            return Ok(new
             {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Restaurant deleted successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-
-
-        // post method for creating a new menu item
         [HttpPost("menuitem")]
         public async Task<IActionResult> AddMenuItem([FromBody] CreateMenuItemDTO dto)
         {
-            try
-            {
-                var id = await _adminService.AddMenuItemAsync(dto);
-                return CreatedAtAction(nameof(AddMenuItem), new { id }, new { Message = "მენიუ ერთეული წარმატებით შეიქმნა", MenuItemId = id });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+            var id = await _adminService.AddMenuItemAsync(dto);
 
-        // put method for updating an existing menu item
+            var response = new
+            {
+                Success = true,
+                Message = "Menu item created successfully",
+                Data = new { MenuItemId = id },
+                Errors = (Dictionary<string, string[]>?)null
+            };
+
+            return CreatedAtAction(nameof(AddMenuItem), new { id }, response);
+        }
 
         [HttpPut("menuitem/{id}")]
         public async Task<IActionResult> UpdateMenuItem(int id, [FromBody] UpdateMenuItemDTO dto)
         {
-            try
+            if (id != dto.Id)
             {
-                if (id != dto.Id)
-                    return BadRequest(new { message = "არ ემთხვევა მენიუ ერთეულის ID-ი" });
-
-                var success = await _adminService.UpdateMenuItemAsync(dto);
-                if (!success)
-                    return NotFound(new { message = "მენიუ ერთეული ვერ მოიძებნა" });
-
-                return NoContent();
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Menu item ID mismatch",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
-            catch (Exception ex)
+
+            var success = await _adminService.UpdateMenuItemAsync(dto);
+            if (!success)
             {
-                return BadRequest(new { message = ex.Message });
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Menu item not found",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Menu item updated successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-        // delete method for deleting a menu item
         [HttpDelete("menuitem/{id}")]
         public async Task<IActionResult> DeleteMenuItem(int id)
         {
-            try
+            var success = await _adminService.DeleteMenuItemAsync(id);
+            if (!success)
             {
-                var success = await _adminService.DeleteMenuItemAsync(id);
-                if (!success)
-                    return NotFound(new { message = "მენიუ ერთეული ვერ მოიძებნა" });
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Menu item not found",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
 
-                return NoContent();
-            }
-            catch (Exception ex)
+            return Ok(new
             {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Menu item deleted successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-
-
-        // post method for creating a new category
         [HttpPost("category")]
         public async Task<IActionResult> AddCategory([FromBody] CreateCategoryDTO dto)
         {
-            try
-            {
-                var id = await _adminService.AddCategoryAsync(dto);
-                return CreatedAtAction(nameof(AddCategory), new { id }, new { Message = "კატეგორია წარმატებით შეიქმნა", CategoryId = id });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+            var id = await _adminService.AddCategoryAsync(dto);
 
+            var response = new
+            {
+                Success = true,
+                Message = "Category created successfully",
+                Data = new { CategoryId = id },
+                Errors = (Dictionary<string, string[]>?)null
+            };
+
+            return CreatedAtAction(nameof(AddCategory), new { id }, response);
+        }
     }
 }

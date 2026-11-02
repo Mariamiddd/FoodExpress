@@ -1,8 +1,10 @@
 using AutoMapper;
+using Food.Application.Constants;
 using Food.Application.DTOs;
 using Food.Application.Interfaces;
 using Food.Domain.Interfaces;
 using Food.Domain.Models.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace Food.Application.Services.Implementations
 {
@@ -10,27 +12,32 @@ namespace Food.Application.Services.Implementations
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ILogger<OrderService> _logger;
 
-        public OrderService(IUnitOfWork unitOfWork, IMapper mapper)
+        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<OrderService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<OrderDTO>> GetAllOrdersAsync()
         {
+            _logger.LogInformation("Retrieving all orders");
             var orders = await _unitOfWork.Orders.GetAllAsync();
             return _mapper.Map<IEnumerable<OrderDTO>>(orders);
         }
 
         public async Task<OrderDTO> GetOrderByIdAsync(int orderId)
         {
+            _logger.LogInformation("Retrieving order with ID: {OrderId}", orderId);
             var order = await _unitOfWork.Orders.GetOrderByIdAsync(orderId);
             return _mapper.Map<OrderDTO>(order);
         }
 
         public async Task<IEnumerable<OrderDTO>> GetUserOrdersAsync(string userId)
         {
+            _logger.LogInformation("Retrieving orders for user: {UserId}", userId);
             var orders = await _unitOfWork.Orders.GetAllAsync();
             var userOrders = orders.Where(o => o.UserId == userId);
             return _mapper.Map<IEnumerable<OrderDTO>>(userOrders);
@@ -38,23 +45,31 @@ namespace Food.Application.Services.Implementations
 
         public async Task<OrderDTO> CreateOrderAsync(string userId, int addressId)
         {
+            _logger.LogInformation("Creating order for user: {UserId} with address: {AddressId}", userId, addressId);
+
             var addresses = await _unitOfWork.Addresses.GetAddressesByUserIdAsync(userId);
 
             if (!addresses.Any(a => a.Id == addressId))
             {
-                throw new UnauthorizedAccessException(
-                    "The selected address does not belong to this user.");
+                _logger.LogWarning("Address {AddressId} does not belong to user {UserId}", addressId, userId);
+                throw new UnauthorizedAccessException(ErrorMessages.InvalidAddressError);
             }
 
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
 
             if (cart == null || !cart.CartItems.Any())
-                throw new Exception("კალათა ცარი ელია. შეკვეთა ვერ შეიქმნება.");
+            {
+                _logger.LogWarning("Cart is empty for user: {UserId}", userId);
+                throw new InvalidOperationException(ErrorMessages.EmptyCartError);
+            }
 
             // validation all items in the cart belong to the same restaurant
             var restaurantIds = cart.CartItems.Select(ci => ci.MenuItem.RestaurantId).Distinct().ToList();
             if (restaurantIds.Count > 1)
-                throw new Exception("ერთ შეკვეთაში კერძები მხოლოდ ერთი რესტორნიდან უნდა იყოს.");
+            {
+                _logger.LogWarning("User {UserId} attempted to order from multiple restaurants", userId);
+                throw new InvalidOperationException(ErrorMessages.MixedRestaurantError);
+            }
 
             var order = new Order
             {
@@ -74,6 +89,7 @@ namespace Food.Application.Services.Implementations
                     MenuItemId = cartItem.MenuItemId,
                     Quantity = cartItem.Quantity,
                     UnitPrice = unitPrice,
+                    PriceAtTimeOfOrder = unitPrice,
                     Name = cartItem.MenuItem.Name
                 });
                 total += (unitPrice * cartItem.Quantity);
@@ -82,36 +98,47 @@ namespace Food.Application.Services.Implementations
             order.TotalPrice = total;
 
             await _unitOfWork.Orders.AddAsync(order);
-            _unitOfWork.Carts.ClearCart(cart); // კალათის გასუფთავება შეკვეთის შემდეგ
+            _unitOfWork.Carts.ClearCart(cart);
             await _unitOfWork.SaveAsync();
+
+            _logger.LogInformation("Order created successfully with ID: {OrderId} for user: {UserId}", order.Id, userId);
 
             return _mapper.Map<OrderDTO>(order);
         }
 
         public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderState newStatus)
         {
-            var order = await _unitOfWork.Orders.GetOrderByIdAsync(orderId);
-            if (order == null) return false;
+            _logger.LogInformation("Updating order {OrderId} status to {NewStatus}", orderId, newStatus);
 
-            // if the order is already delivered or cancelled, we cannot change its status
-            if (newStatus == OrderState.Cancelled && (order.Status != OrderState.Created && order.Status != OrderState.Confirmed))
+            var order = await _unitOfWork.Orders.GetOrderByIdAsync(orderId)
+                ?? throw new KeyNotFoundException(ErrorMessages.OrderNotFound);
+
+            switch (newStatus)
             {
-                throw new Exception("გაუქმება დაშვებული მხოლოდ Created ან Confirmed სტატუსიდან.");
+                case OrderState.Confirmed:
+                    order.Confirm();
+                    break;
+                case OrderState.Preparing:
+                    order.StartPreparing();
+                    break;
+                case OrderState.OnTheWay:
+                    order.SendForDelivery();
+                    break;
+                case OrderState.Delivered:
+                    order.MarkAsDelivered();
+                    break;
+                case OrderState.Cancelled:
+                    order.Cancel();
+                    break;
+                default:
+                    _logger.LogError("Invalid status transition to {NewStatus} for order {OrderId}", newStatus, orderId);
+                    throw new InvalidOperationException($"State transition to {newStatus} is not supported.");
             }
 
-            // Validate the status transition
-            if (newStatus == OrderState.Confirmed && order.Status != OrderState.Created)
-                throw new Exception("შეკვეთა დასტურდება მხოლოდ Created სტატუსიდან.");
-            if (newStatus == OrderState.Preparing && order.Status != OrderState.Confirmed)
-                throw new Exception("მომზადება დაიწყება მხოლოდ Confirmed სტატუსიდან.");
-            if (newStatus == OrderState.OnTheWay && order.Status != OrderState.Preparing)
-                throw new Exception("დელივერი დაიწყება მხოლოდ Preparing სტატუსიდან.");
-            if (newStatus == OrderState.Delivered && order.Status != OrderState.OnTheWay)
-                throw new Exception("მიტანა დასრულდება მხოლოდ OnTheWay სტატუსიდან.");
-
-            order.Status = newStatus;
-            await _unitOfWork.Orders.UpdateAsync(order);
+            _unitOfWork.Orders.UpdateAsync(order);
             await _unitOfWork.SaveAsync();
+
+            _logger.LogInformation("Order {OrderId} status updated to {NewStatus}", orderId, newStatus);
 
             return true;
         }

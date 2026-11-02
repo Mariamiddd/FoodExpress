@@ -5,11 +5,13 @@ using Food.Application.Profiles;
 using Food.Application.Services.Implementations;
 using Food.Application.Services.Interfaces;
 using Food.Domain.Interfaces;
-using Food.Infrastructure.Data;
 using Food.Domain.Models.Identity;
+using Food.Infrastructure.Data;
 using Food.Infrastructure.Repositories;
+using Food.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -25,7 +27,28 @@ namespace Food.Web
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
+            {
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var errors = context.ModelState
+                        .Where(e => e.Value.Errors.Count > 0)
+                        .ToDictionary(
+                            e => e.Key,
+                            e => e.Value.Errors.Select(er => er.ErrorMessage).ToArray()
+                        );
+
+                    
+                    var response = new
+                    {
+                        Success = false,
+                        Message = "Validation error(s)",
+                        Errors = errors
+                    };
+                    return new BadRequestObjectResult(response);
+                };
+            });
+
             builder.Services.AddOpenApi();
 
             // Add context 
@@ -62,6 +85,11 @@ namespace Food.Web
                     Title = "FoodExpress API",
                     Version = "v1"
                 });
+
+             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+             options.IncludeXmlComments(xmlPath);
+
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
@@ -117,8 +145,20 @@ namespace Food.Web
                 };
             });
 
+            // Add CORS policy to allow open frontend access
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policyBuilder =>
+                    policyBuilder.AllowAnyOrigin()
+                                 .AllowAnyHeader()
+                                 .AllowAnyMethod()
+                );
+            });
+
             var app = builder.Build();
 
+            // Use Exception Handler Middleware
+            app.UseMiddleware<ExceptionHandlerMiddleware>();
 
             // Seed roles and admin user
             using (var scope = app.Services.CreateScope())
@@ -134,10 +174,16 @@ namespace Food.Web
                 app.MapOpenApi();
             }
 
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+
+            // middleware configuration
             app.UseSwagger();
             app.UseSwaggerUI();
 
             app.UseHttpsRedirection();
+            // Use CORS policy 
+            app.UseCors("AllowAll");
 
             // authorization and authentication middlwares
             app.UseAuthentication();

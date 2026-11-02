@@ -23,7 +23,14 @@ namespace Food.Web.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterDTO dto, CancellationToken cancellationToken)
         {
             await _usersService.RegisterUserAsync(dto, cancellationToken);
-            return Ok("User registered successfully");
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "User registered successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
         [HttpPost]
@@ -32,10 +39,22 @@ namespace Food.Web.Controllers
             var result = await _authService.LoginUserAsync(dto, cancellationToken);
             if (result == null)
             {
-                return Unauthorized("Invalid email or password");
+                return Unauthorized(new
+                {
+                    Success = false,
+                    Message = "Invalid email or password",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
-            return Ok(result);
-        }
 
+            return Ok(new
+            {
+                Success = true,
+                Message = "Login successful",
+                Data = result, // This will contain the JWT token and user info
+                Errors = (Dictionary<string, string[]>?)null
+            });
+        }
     }
 }

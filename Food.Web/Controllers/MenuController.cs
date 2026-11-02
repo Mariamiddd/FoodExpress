@@ -17,72 +17,82 @@ namespace Food.Web.Controllers
             _menuService = menuService;
         }
 
-        
         [HttpGet("restaurant/{restaurantId}")]
         public async Task<IActionResult> GetMenuByRestaurant(int restaurantId)
         {
-            try
+            var menuItems = await _menuService.GetMenuByRestaurantAsync(restaurantId);
+
+            return Ok(new
             {
-                var menuItems = await _menuService.GetMenuByRestaurantAsync(restaurantId);
-                return Ok(menuItems);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Menu items retrieved successfully.",
+                Data = menuItems,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-        
         [HttpGet("{id}")]
         public async Task<IActionResult> GetMenuItemById(int id)
         {
-            try
-            {
-                var menuItem = await _menuService.GetMenuItemByIdAsync(id);
-                if (menuItem == null)
-                    return NotFound(new { message = "მენიუ ერთეულ ვერ მოიძებნა." });
+            var menuItem = await _menuService.GetMenuItemByIdAsync(id);
 
-                return Ok(menuItem);
-            }
-            catch (Exception ex)
+            if (menuItem == null)
             {
-                return BadRequest(new { message = ex.Message });
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Menu item not found.",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Menu item retrieved successfully.",
+                Data = menuItem,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-       
         [HttpGet("category/{categoryId}")]
         public async Task<IActionResult> GetMenuByCategory(int categoryId)
         {
-            try
+            var menuItems = await _menuService.GetMenuByCategoryAsync(categoryId);
+
+            return Ok(new
             {
-                var menuItems = await _menuService.GetMenuByCategoryAsync(categoryId);
-                return Ok(menuItems);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Menu items retrieved successfully.",
+                Data = menuItems,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-       
         [HttpGet("search")]
         public async Task<IActionResult> SearchMenuItems([FromQuery] string q, [FromQuery] int? restaurantId = null)
         {
-            try
+            if (string.IsNullOrWhiteSpace(q))
             {
-                if (string.IsNullOrWhiteSpace(q))
+                return BadRequest(new
                 {
-                    return BadRequest(new { message = "ძებნის ტერმინი აუცილებელია." });
-                }
+                    Success = false,
+                    Message = "Search term is required.",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
 
-                var menuItems = await _menuService.SearchMenuItemsAsync(q, restaurantId);
-                return Ok(menuItems);
-            }
-            catch (Exception ex)
+            var menuItems = await _menuService.SearchMenuItemsAsync(q, restaurantId);
+
+            return Ok(new
             {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Search completed successfully.",
+                Data = menuItems,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
     }
 }

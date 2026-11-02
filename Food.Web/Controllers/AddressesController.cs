@@ -22,7 +22,7 @@ namespace Food.Web.Controllers
         private string GetUserId()
         {
             return User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? throw new UnauthorizedAccessException();
+                ?? throw new UnauthorizedAccessException("User isnt authenticated");
         }
 
         [HttpPost]
@@ -31,8 +31,15 @@ namespace Food.Web.Controllers
         {
             var address = await _addressService.AddAddressAsync(
                 GetUserId(), request);
+            var response = new
+            {
+                Success = true,
+                Message = "Address added successfully",
+                Data = address,
+                Errors = (Dictionary<string, string[]>?)null
+            };
 
-            return StatusCode(201, address);
+            return StatusCode(201, response);
         }
 
         [HttpGet("my")]
@@ -40,8 +47,15 @@ namespace Food.Web.Controllers
         {
             var addresses =
                 await _addressService.GetUserAddressesAsync(GetUserId());
+            var response = new
+            {
+                Success = true,
+                Message = "User addresses retrieved successfully",
+                Data = addresses,
+                Errors = (Dictionary<string, string[]>?)null
+            };
 
-            return Ok(addresses);
+            return Ok(response);
         }
     }
 }

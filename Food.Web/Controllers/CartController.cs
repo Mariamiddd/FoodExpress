@@ -18,42 +18,67 @@ namespace Food.Web.Controllers
             _cartService = cartService;
         }
 
-        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
+        // Get the user ID from the claims
+        private string? GetUserId()
+        {
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> GetCart()
         {
             var cart = await _cartService.GetCartAsync(GetUserId());
-            return Ok(cart ?? (object)new { Message = "cart is empty" });
+
+            return Ok(new
+            {
+                Success = true,
+                Message = cart == null ? "Cart is empty" : "Cart retrieved successfully",
+                Data = cart,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
         [HttpPost("items")]
         public async Task<IActionResult> AddToCart([FromBody] AddToCartDTO dto)
         {
-            try
+            await _cartService.AddToCartAsync(GetUserId(), dto);
+
+            return Ok(new
             {
-                await _cartService.AddToCartAsync(GetUserId(), dto);
-                return Ok(new { Message = "item added to cart" });
-            }
-            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+                Success = true,
+                Message = "Item added to cart successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
         [HttpPut("items/{menuItemId}")]
         public async Task<IActionResult> UpdateCartItem(int menuItemId, [FromBody] int quantity)
         {
-            try
+            await _cartService.UpdateCartItemAsync(GetUserId(), menuItemId, quantity);
+
+            return Ok(new
             {
-                await _cartService.UpdateCartItemAsync(GetUserId(), menuItemId, quantity);
-                return Ok(new { Message = "quantity updated." });
-            }
-            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+                Success = true,
+                Message = "Quantity updated successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
         [HttpDelete("items/{menuItemId}")]
         public async Task<IActionResult> RemoveFromCart(int menuItemId)
         {
             await _cartService.RemoveFromCartAsync(GetUserId(), menuItemId);
-            return NoContent();
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Item removed from cart successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
     }
 }

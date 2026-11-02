@@ -22,71 +22,92 @@ namespace Food.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllRestaurants()
         {
-            try
+            var restaurants = await _restaurantService.GetAllRestaurantsAsync();
+
+            return Ok(new
             {
-                var restaurants = await _restaurantService.GetAllRestaurantsAsync();
-                return Ok(restaurants);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Restaurants retrieved successfully.",
+                Data = restaurants,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-       
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetRestaurantById(int id)
         {
-            try
-            {
-                var restaurant = await _restaurantService.GetRestaurantByIdAsync(id);
-                if (restaurant == null)
-                    return NotFound(new { message = "restaurant not found." });
+            var restaurant = await _restaurantService.GetRestaurantByIdAsync(id);
 
-                return Ok(restaurant);
-            }
-            catch (Exception ex)
+            if (restaurant == null)
             {
-                return BadRequest(new { message = ex.Message });
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Restaurant not found.",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Restaurant retrieved successfully.",
+                Data = restaurant,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-        
         [HttpGet("search")]
         public async Task<IActionResult> SearchRestaurants([FromQuery] string q)
         {
-            try
+            if (string.IsNullOrWhiteSpace(q))
             {
-                if (string.IsNullOrWhiteSpace(q))
+                return BadRequest(new
                 {
-                    return BadRequest(new { message = "search term is required." });
-                }
+                    Success = false,
+                    Message = "Search term is required.",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
 
-                var restaurants = await _restaurantService.SearchRestaurantsAsync(q);
-                return Ok(restaurants);
-            }
-            catch (Exception ex)
+            var restaurants = await _restaurantService.SearchRestaurantsAsync(q);
+
+            return Ok(new
             {
-                return BadRequest(new { message = ex.Message });
-            }
+                Success = true,
+                Message = "Search completed successfully.",
+                Data = restaurants,
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
 
-        
+
         [HttpGet("{id}/menu")]
         public async Task<IActionResult> GetRestaurantMenu(int id)
         {
-            try
-            {
-                var restaurant = await _restaurantService.GetRestaurantByIdAsync(id);
-                if (restaurant == null)
-                    return NotFound(new { message = "restaurant not found." });
+            var restaurant = await _restaurantService.GetRestaurantByIdAsync(id);
 
-                return Ok(restaurant.MenuItems ?? new List<MenuItemDTO>());
-            }
-            catch (Exception ex)
+            if (restaurant == null)
             {
-                return BadRequest(new { message = ex.Message });
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Restaurant not found.",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
             }
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Menu retrieved successfully.",
+                Data = restaurant.MenuItems ?? new List<MenuItemDTO>(),
+                Errors = (Dictionary<string, string[]>?)null
+            });
         }
     }
 }
