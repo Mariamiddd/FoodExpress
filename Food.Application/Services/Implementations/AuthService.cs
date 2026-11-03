@@ -74,10 +74,11 @@ namespace Food.Application.Services.Implementations
             new Claim(ClaimTypes.Name, user.UserName)
         };
 
-            // Injecting roles into the claims
+            // Injecting roles into the claims - add both long form (ClaimTypes.Role) and short form ("role")
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim("role", role));  // Add short form for frontend compatibility
             }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
@@ -98,7 +99,8 @@ namespace Food.Application.Services.Implementations
                 ExpiresAt = expiresAt,
                 UserId = user.Id,
                 Email = user.Email,
-                UserName = user.UserName
+                UserName = user.UserName,
+                Roles = roles  // Include roles in response
             };
         }
 

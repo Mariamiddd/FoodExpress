@@ -7,8 +7,7 @@ namespace Food.Application.DTOs
 {
     public class CreateOrderRequestDTO
     {
-        [Required(ErrorMessage = "Address ID is required")]
-        [Range(1, int.MaxValue, ErrorMessage = "Address ID must be valid")]
+        [Range(1, int.MaxValue, ErrorMessage = "A valid address must be selected")]
         public int AddressId { get; set; }
     }
 }

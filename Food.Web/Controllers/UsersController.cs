@@ -21,6 +21,10 @@ namespace Food.Web.Controllers
         {
             _usersService = usersService;
             _context = context;
+            if (webHostEnvironment?.WebRootPath == null)
+            {
+                throw new ArgumentNullException(nameof(webHostEnvironment), "WebRootPath cannot be null");
+            }
             var uploadPath = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
             _imageUploadService = new ImageUploadService(uploadPath);
         }

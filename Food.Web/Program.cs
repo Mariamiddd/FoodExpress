@@ -30,7 +30,7 @@ namespace Food.Web
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddControllers()
-                .AddJsonOptions(options => 
+                .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
                 })
@@ -93,9 +93,9 @@ namespace Food.Web
                     Version = "v1"
                 });
 
-             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-             options.IncludeXmlComments(xmlPath);
+                var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                options.IncludeXmlComments(xmlPath);
 
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -246,9 +246,9 @@ namespace Food.Web
                 {
                     try
                     {
-                        adminUser = new ApplicationUser 
-                        { 
-                            UserName = adminEmail, 
+                        adminUser = new ApplicationUser
+                        {
+                            UserName = adminEmail,
                             Email = adminEmail,
                             EmailConfirmed = true,
                             PhoneNumberConfirmed = false
@@ -300,9 +300,9 @@ namespace Food.Web
                     {
                         try
                         {
-                            var newCustomer = new ApplicationUser 
-                            { 
-                                UserName = testCustomer.Email, 
+                            var newCustomer = new ApplicationUser
+                            {
+                                UserName = testCustomer.Email,
                                 Email = testCustomer.Email,
                                 EmailConfirmed = true,
                                 PhoneNumberConfirmed = false
@@ -355,18 +355,18 @@ namespace Food.Web
             {
                 // Seed categories
                 var categories = new List<Category>
-                {
-                    new Category { Name = "Burgers" },
-                    new Category { Name = "Pizza" },
-                    new Category { Name = "Pasta" },
-                    new Category { Name = "Salads" },
-                    new Category { Name = "Desserts" },
-                    new Category { Name = "Beverages" }
-                };
+        {
+            new Category { Name = "Burgers" },
+            new Category { Name = "Pizza" },
+            new Category { Name = "Pasta" },
+            new Category { Name = "Salads" },
+            new Category { Name = "Desserts" },
+            new Category { Name = "Beverages" }
+        };
 
                 foreach (var category in categories)
                 {
-                    if (!dbContext.Categories.Any(c => c.Name == category.Name))
+                    if (!await dbContext.Categories.AnyAsync(c => c.Name == category.Name))
                     {
                         dbContext.Categories.Add(category);
                     }
@@ -375,15 +375,15 @@ namespace Food.Web
 
                 // Seed restaurants
                 var restaurants = new List<Restaurant>
-                {
-                    new Restaurant { Name = "Burger Palace", Address = "123 Main Street" },
-                    new Restaurant { Name = "Pizza Palace", Address = "456 Oak Avenue" },
-                    new Restaurant { Name = "Pasta House", Address = "789 Elm Street" }
-                };
+        {
+            new Restaurant { Name = "Burger Palace", Address = "123 Main Street" },
+            new Restaurant { Name = "Pizza Palace", Address = "456 Oak Avenue" },
+            new Restaurant { Name = "Pasta House", Address = "789 Elm Street" }
+        };
 
                 foreach (var restaurant in restaurants)
                 {
-                    if (!dbContext.Restaurants.Any(r => r.Name == restaurant.Name))
+                    if (!await dbContext.Restaurants.AnyAsync(r => r.Name == restaurant.Name))
                     {
                         dbContext.Restaurants.Add(restaurant);
                     }
@@ -391,22 +391,22 @@ namespace Food.Web
                 await dbContext.SaveChangesAsync();
 
                 // Seed menu items for Burger Palace
-                var burgerPalace = dbContext.Restaurants.FirstOrDefault(r => r.Name == "Burger Palace");
-                var burgersCategory = dbContext.Categories.FirstOrDefault(c => c.Name == "Burgers");
-                var drinksCategory = dbContext.Categories.FirstOrDefault(c => c.Name == "Beverages");
+                var burgerPalace = await dbContext.Restaurants.FirstOrDefaultAsync(r => r.Name == "Burger Palace");
+                var burgersCategory = await dbContext.Categories.FirstOrDefaultAsync(c => c.Name == "Burgers");
+                var drinksCategory = await dbContext.Categories.FirstOrDefaultAsync(c => c.Name == "Beverages");
 
                 if (burgerPalace != null && burgersCategory != null)
                 {
                     var burgerPaletteItems = new List<MenuItem>
-                    {
-                        new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = burgersCategory.Id, Name = "Classic Burger", Price = 8.99m, IsAvailable = true },
-                        new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = burgersCategory.Id, Name = "Double Cheeseburger", Price = 10.99m, IsAvailable = true },
-                        new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = burgersCategory.Id, Name = "Bacon Burger", Price = 9.99m, IsAvailable = true }
-                    };
+            {
+                new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = burgersCategory.Id, Name = "Classic Burger", Price = 8.99m, IsAvailable = true },
+                new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = burgersCategory.Id, Name = "Double Cheeseburger", Price = 10.99m, IsAvailable = true },
+                new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = burgersCategory.Id, Name = "Bacon Burger", Price = 9.99m, IsAvailable = true }
+            };
 
                     foreach (var item in burgerPaletteItems)
                     {
-                        if (!dbContext.MenuItems.Any(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
+                        if (!await dbContext.MenuItems.AnyAsync(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
                         {
                             dbContext.MenuItems.Add(item);
                         }
@@ -416,14 +416,14 @@ namespace Food.Web
                 if (burgerPalace != null && drinksCategory != null)
                 {
                     var drinks = new List<MenuItem>
-                    {
-                        new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = drinksCategory.Id, Name = "Soda", Price = 2.99m, IsAvailable = true },
-                        new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = drinksCategory.Id, Name = "Iced Tea", Price = 2.49m, IsAvailable = true }
-                    };
+            {
+                new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = drinksCategory.Id, Name = "Soda", Price = 2.99m, IsAvailable = true },
+                new MenuItem { RestaurantId = burgerPalace.Id, CategoryId = drinksCategory.Id, Name = "Iced Tea", Price = 2.49m, IsAvailable = true }
+            };
 
                     foreach (var item in drinks)
                     {
-                        if (!dbContext.MenuItems.Any(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
+                        if (!await dbContext.MenuItems.AnyAsync(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
                         {
                             dbContext.MenuItems.Add(item);
                         }
@@ -431,21 +431,21 @@ namespace Food.Web
                 }
 
                 // Seed menu items for Pizza Palace
-                var pizzaPalace = dbContext.Restaurants.FirstOrDefault(r => r.Name == "Pizza Palace");
-                var pizzaCategory = dbContext.Categories.FirstOrDefault(c => c.Name == "Pizza");
+                var pizzaPalace = await dbContext.Restaurants.FirstOrDefaultAsync(r => r.Name == "Pizza Palace");
+                var pizzaCategory = await dbContext.Categories.FirstOrDefaultAsync(c => c.Name == "Pizza");
 
                 if (pizzaPalace != null && pizzaCategory != null)
                 {
                     var pizzaItems = new List<MenuItem>
-                    {
-                        new MenuItem { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCategory.Id, Name = "Margherita Pizza", Price = 12.99m, IsAvailable = true },
-                        new MenuItem { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCategory.Id, Name = "Pepperoni Pizza", Price = 13.99m, IsAvailable = true },
-                        new MenuItem { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCategory.Id, Name = "Vegetarian Pizza", Price = 11.99m, IsAvailable = true }
-                    };
+            {
+                new MenuItem { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCategory.Id, Name = "Margherita Pizza", Price = 12.99m, IsAvailable = true },
+                new MenuItem { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCategory.Id, Name = "Pepperoni Pizza", Price = 13.99m, IsAvailable = true },
+                new MenuItem { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCategory.Id, Name = "Vegetarian Pizza", Price = 11.99m, IsAvailable = true }
+            };
 
                     foreach (var item in pizzaItems)
                     {
-                        if (!dbContext.MenuItems.Any(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
+                        if (!await dbContext.MenuItems.AnyAsync(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
                         {
                             dbContext.MenuItems.Add(item);
                         }
@@ -453,21 +453,21 @@ namespace Food.Web
                 }
 
                 // Seed menu items for Pasta House
-                var pastaHouse = dbContext.Restaurants.FirstOrDefault(r => r.Name == "Pasta House");
-                var pastaCategory = dbContext.Categories.FirstOrDefault(c => c.Name == "Pasta");
+                var pastaHouse = await dbContext.Restaurants.FirstOrDefaultAsync(r => r.Name == "Pasta House");
+                var pastaCategory = await dbContext.Categories.FirstOrDefaultAsync(c => c.Name == "Pasta");
 
                 if (pastaHouse != null && pastaCategory != null)
                 {
                     var pastaItems = new List<MenuItem>
-                    {
-                        new MenuItem { RestaurantId = pastaHouse.Id, CategoryId = pastaCategory.Id, Name = "Spaghetti Carbonara", Price = 11.99m, IsAvailable = true },
-                        new MenuItem { RestaurantId = pastaHouse.Id, CategoryId = pastaCategory.Id, Name = "Fettuccine Alfredo", Price = 11.99m, IsAvailable = true },
-                        new MenuItem { RestaurantId = pastaHouse.Id, CategoryId = pastaCategory.Id, Name = "Lasagna", Price = 12.99m, IsAvailable = true }
-                    };
+            {
+                new MenuItem { RestaurantId = pastaHouse.Id, CategoryId = pastaCategory.Id, Name = "Spaghetti Carbonara", Price = 11.99m, IsAvailable = true },
+                new MenuItem { RestaurantId = pastaHouse.Id, CategoryId = pastaCategory.Id, Name = "Fettuccine Alfredo", Price = 11.99m, IsAvailable = true },
+                new MenuItem { RestaurantId = pastaHouse.Id, CategoryId = pastaCategory.Id, Name = "Lasagna", Price = 12.99m, IsAvailable = true }
+            };
 
                     foreach (var item in pastaItems)
                     {
-                        if (!dbContext.MenuItems.Any(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
+                        if (!await dbContext.MenuItems.AnyAsync(m => m.RestaurantId == item.RestaurantId && m.Name == item.Name))
                         {
                             dbContext.MenuItems.Add(item);
                         }

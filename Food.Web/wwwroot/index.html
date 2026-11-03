@@ -173,11 +173,11 @@
                         <h3 style="margin-top: 20px;">Order Management</h3>
                         <input type="number" id="adm-ord-id" placeholder="Order ID">
                         <select id="adm-ord-status">
-                            <option value="0">Pending</option>
-                            <option value="1">Processing</option>
-                            <option value="2">OnTheWay</option>
-                            <option value="3">Delivered</option>
-                            <option value="4">Cancelled</option>
+                            <option value="1">1 - Confirmed</option>
+                            <option value="2">2 - Preparing</option>
+                            <option value="3">3 - OnTheWay</option>
+                            <option value="4">4 - Delivered</option>
+                            <option value="5">5 - Cancelled</option>
                         </select>
                         <button onclick="adminUpdateOrderStatus()" class="btn-secondary">Update Status</button>
                         <button onclick="adminLoadAllOrders()" class="btn-outline" style="margin-top: 10px;">Load All Orders</button>

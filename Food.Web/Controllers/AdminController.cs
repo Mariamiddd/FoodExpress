@@ -17,6 +17,10 @@ namespace Food.Web.Controllers
         public AdminController(IAdminService adminService, IWebHostEnvironment webHostEnvironment)
         {
             _adminService = adminService;
+            if (webHostEnvironment?.WebRootPath == null)
+            {
+                throw new ArgumentNullException(nameof(webHostEnvironment), "WebRootPath cannot be null");
+            }
             var uploadPath = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
             _imageUploadService = new ImageUploadService(uploadPath);
         }
@@ -24,8 +28,7 @@ namespace Food.Web.Controllers
         [HttpPost("restaurants")]
         public async Task<IActionResult> AddRestaurant([FromBody] CreateRestaurantDTO dto)
         {
-        
-                var id = await _adminService.AddRestaurantAsync(dto);
+            var id = await _adminService.AddRestaurantAsync(dto);
             var response = new
             {
                 Success = true,
@@ -33,8 +36,7 @@ namespace Food.Web.Controllers
                 Data = new { RestaurantId = id },
                 Errors = (Dictionary<string, string[]>?)null
             };
-                return CreatedAtAction(nameof(AddRestaurant), new { id }, new { Message = "Restaurant created successfully", RestaurantId = id });
-           
+            return CreatedAtAction(nameof(AddRestaurant), new { id }, response);
         }
 
         [HttpPut("restaurants/{id}")]

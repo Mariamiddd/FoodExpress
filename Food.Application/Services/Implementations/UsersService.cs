@@ -50,6 +50,16 @@ namespace Food.Application.Services.Implementations
             // Create a cart for the new user
             var cart = new Cart { UserId = user.Id };
             await _unitOfWork.Carts.AddAsync(cart);
+
+            // Create a default address for the new user
+            var defaultAddress = new Address
+            {
+                UserId = user.Id,
+                Street = "Not specified",
+                City = "Not specified"
+            };
+            await _unitOfWork.Addresses.AddAsync(defaultAddress);
+
             await _unitOfWork.SaveAsync();
         }
     }

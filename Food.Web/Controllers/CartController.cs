@@ -54,9 +54,9 @@ namespace Food.Web.Controllers
         }
 
         [HttpPut("items/{menuItemId}")]
-        public async Task<IActionResult> UpdateCartItem(int menuItemId, [FromBody] int quantity)
+        public async Task<IActionResult> UpdateCartItem(int menuItemId, [FromBody] UpdateCartQuantityDTO request)
         {
-            await _cartService.UpdateCartItemAsync(GetUserId(), menuItemId, quantity);
+            await _cartService.UpdateCartItemAsync(GetUserId(), menuItemId, request.Quantity);
 
             return Ok(new
             {
