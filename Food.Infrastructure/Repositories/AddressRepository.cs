@@ -33,5 +33,10 @@ namespace Food.Infrastructure.Repositories
                 .Where(a => a.UserId == userId)
                 .ToListAsync();
         }
+
+        public void Delete(Address address)
+        {
+            _context.Addresses.Remove(address);
+        }
     }
 }

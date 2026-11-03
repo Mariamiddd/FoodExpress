@@ -57,5 +57,29 @@ namespace Food.Web.Controllers
 
             return Ok(response);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAddress(int id)
+        {
+            var deleted = await _addressService.DeleteAddressAsync(GetUserId(), id);
+            if (!deleted)
+            {
+                return NotFound(new
+                {
+                    Success = false,
+                    Message = "Address not found",
+                    Data = (object?)null,
+                    Errors = (Dictionary<string, string[]>?)null
+                });
+            }
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Address deleted successfully",
+                Data = (object?)null,
+                Errors = (Dictionary<string, string[]>?)null
+            });
+        }
     }
 }

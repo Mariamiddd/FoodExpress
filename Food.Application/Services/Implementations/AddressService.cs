@@ -46,5 +46,19 @@ namespace Food.Application.Services.Implementations
 
             return _mapper.Map<IEnumerable<AddressDTO>>(userAddresses);
         }
+
+        public async Task<bool> DeleteAddressAsync(string userId, int addressId)
+        {
+            var userAddresses = await _unitOfWork.Addresses.GetAddressesByUserIdAsync(userId);
+            var address = userAddresses.FirstOrDefault(a => a.Id == addressId);
+            if (address == null)
+            {
+                return false;
+            }
+
+            _unitOfWork.Addresses.Delete(address);
+            await _unitOfWork.SaveAsync();
+            return true;
+        }
     }
 }

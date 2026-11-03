@@ -25,6 +25,7 @@ namespace Food.Web.Controllers
         }
         // get all orders for admin users
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllOrders()
         {
             var orders = await _orderService.GetAllOrdersAsync();
@@ -68,6 +69,12 @@ namespace Food.Web.Controllers
                     Data = (object?)null,
                     Errors = (Dictionary<string, string[]>?)null
                 });
+            }
+
+            var userId = GetUserId();
+            if (!User.IsInRole("Admin") && order.UserId != userId)
+            {
+                return Forbid();
             }
 
             return Ok(new

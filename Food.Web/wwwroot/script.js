@@ -33,6 +33,39 @@ function getAuthHeaders() {
     return headers;
 }
 
+async function apiFetch(url, options = {}) {
+    const response = await fetch(url, options);
+    const text = await response.text();
+    let data = {};
+    if (text && text.trim()) {
+        try {
+            data = JSON.parse(text);
+        } catch {
+            data = { Message: text };
+        }
+    }
+
+    const headers = options.headers || {};
+    const hadToken = !!(headers.Authorization || headers.authorization);
+    if (response.status === 401 && hadToken) {
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        currentUser = null;
+        cart = [];
+        selectedRestaurantId = null;
+        const modal = document.getElementById('auth-modal');
+        if (modal) modal.style.display = 'none';
+        if (typeof updateAuthUI === 'function') updateAuthUI();
+        if (typeof showView === 'function') showView('restaurants');
+        showToast('Session expired. Please log in again.', 'error');
+        return { response, data, unauthorized: true };
+    }
+
+    return { response, data, unauthorized: false };
+}
+
 function isLoggedIn() {
     return !!localStorage.getItem('jwtToken');
 }
@@ -82,13 +115,13 @@ async function handleLogin(event) {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/auth/login`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             const tokenData = data.Data || data.data;
@@ -141,13 +174,13 @@ async function handleRegister(event) {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/auth/register`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userName: username, email, password })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Registration successful! Please login.', 'success');
@@ -272,12 +305,12 @@ async function loadRestaurants() {
     listElement.innerHTML = '<p>Loading restaurants...</p>';
 
     try {
-        const response = await fetch(`${apiUrl}/restaurants`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/restaurants`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         listElement.innerHTML = '';
 
         if (data.Success || data.success) {
@@ -319,12 +352,12 @@ async function loadMenu(restaurantId) {
     if (!menuList || !menuContainer) return;
 
     try {
-        const response = await fetch(`${apiUrl}/restaurants/${restaurantId}/menu`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/restaurants/${restaurantId}/menu`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         menuList.innerHTML = '';
 
         if (data.Success || data.success) {
@@ -378,12 +411,12 @@ async function searchRestaurants() {
     const listElement = document.getElementById('restaurants-list');
 
     try {
-        const response = await fetch(`${apiUrl}/restaurants/search?q=${encodeURIComponent(query)}`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/restaurants/search?q=${encodeURIComponent(query)}`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         listElement.innerHTML = '';
 
         if (data.Success || data.success) {
@@ -426,12 +459,12 @@ async function searchMenus() {
     const menuContainer = document.getElementById('menu-container');
 
     try {
-        const response = await fetch(`${apiUrl}/menu/search?q=${encodeURIComponent(query)}`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/menu/search?q=${encodeURIComponent(query)}`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         menuList.innerHTML = '';
 
         if (data.Success || data.success) {
@@ -483,7 +516,7 @@ async function addToCart(itemId, price, name) {
     const quantity = parseInt(qtyInput?.value) || 1;
 
     try {
-        const response = await fetch(`${apiUrl}/cart/items`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/cart/items`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({
@@ -492,7 +525,7 @@ async function addToCart(itemId, price, name) {
             })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast(`${name} added to cart!`, 'success');
@@ -508,12 +541,12 @@ async function addToCart(itemId, price, name) {
 
 async function loadCartFromBackend() {
     try {
-        const response = await fetch(`${apiUrl}/cart`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/cart`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             const cartData = data.Data || data.data;
@@ -575,28 +608,28 @@ function displayCart() {
     loadAddressesForCheckout();
 }
 
-function removeFromCart(index) {
+async function removeFromCart(index) {
     const itemToRemove = cart[index];
     if (!itemToRemove) return;
 
-    fetch(`${apiUrl}/cart/items/${itemToRemove.itemId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.Success || data.success) {
-                cart.splice(index, 1);
-                displayCart();
-                showToast('Item removed from cart', 'info');
-            } else {
-                showToast(data.Message || data.message || 'Failed to remove item', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error removing from cart:', error);
-            showToast('Error removing item from cart', 'error');
+    try {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/cart/items/${itemToRemove.itemId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
         });
+        if (unauthorized) return;
+
+        if (response.ok && (data.Success || data.success)) {
+            cart.splice(index, 1);
+            displayCart();
+            showToast('Item removed from cart', 'info');
+        } else {
+            showToast(data.Message || data.message || 'Failed to remove item', 'error');
+        }
+    } catch (error) {
+        console.error('Error removing from cart:', error);
+        showToast('Error removing item from cart', 'error');
+    }
 }
 
 async function loadAddressesForCheckout() {
@@ -607,12 +640,12 @@ async function loadAddressesForCheckout() {
 
     try {
         // Call /api/addresses/my to match AddressesController
-        const response = await fetch(`${apiUrl}/addresses/my`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/addresses/my`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         select.innerHTML = '';
 
         if (!response.ok) {
@@ -665,7 +698,7 @@ async function checkout() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/orders`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/orders`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({
@@ -673,7 +706,7 @@ async function checkout() {
             })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (!response.ok) {
             const errorMsg = data.Message || data.message || 'Checkout failed';
@@ -713,12 +746,12 @@ async function loadOrders() {
     ordersDiv.innerHTML = '<p>Loading orders...</p>';
 
     try {
-        const response = await fetch(`${apiUrl}/orders/my`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/orders/my`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         ordersDiv.innerHTML = '';
 
         if (data.Success || data.success) {
@@ -769,12 +802,12 @@ async function loadAddresses() {
     if (!addressesDiv) return;
 
     try {
-        const response = await fetch(`${apiUrl}/addresses/my`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/addresses/my`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         addressesDiv.innerHTML = '';
 
         if (data.Success || data.success) {
@@ -818,13 +851,13 @@ async function addAddress() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/addresses`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/addresses`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ city, street })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('addr-city').value = '';
@@ -845,12 +878,12 @@ async function deleteAddress(addressId) {
     if (!confirm('Are you sure you want to delete this address?')) return;
 
     try {
-        const response = await fetch(`${apiUrl}/addresses/${addressId}`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/addresses/${addressId}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Address deleted successfully', 'success');
@@ -912,13 +945,13 @@ async function adminAddRestaurant() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/admin/restaurants`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/restaurants`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ name: nameVal, address: addressVal })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success || data.restaurantId || data.RestaurantId)) {
             name.value = '';
@@ -945,13 +978,13 @@ async function adminUpdateRestaurant() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/admin/restaurants/${id}`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/restaurants/${id}`, {
             method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify({ id, name, address })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('adm-rest-id').value = '';
@@ -978,12 +1011,12 @@ async function adminDeleteRestaurant() {
     if (!confirm('Are you sure you want to delete this restaurant?')) return;
 
     try {
-        const response = await fetch(`${apiUrl}/admin/restaurants/${id}`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/restaurants/${id}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('adm-rest-id').value = '';
@@ -1011,7 +1044,7 @@ async function adminAddMenuItem() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/admin/menuitems`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/menuitems`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({
@@ -1023,7 +1056,7 @@ async function adminAddMenuItem() {
             })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('adm-menu-restId').value = '';
@@ -1058,7 +1091,7 @@ async function adminUpdateMenuItem() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/admin/menuitems/${id}`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/menuitems/${id}`, {
             method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify({
@@ -1071,7 +1104,7 @@ async function adminUpdateMenuItem() {
             })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Menu item updated successfully!', 'success');
@@ -1095,12 +1128,12 @@ async function adminDeleteMenuItem() {
     if (!confirm('Are you sure you want to delete this menu item?')) return;
 
     try {
-        const response = await fetch(`${apiUrl}/admin/menuitems/${id}`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/menuitems/${id}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('adm-menu-id').value = '';
@@ -1123,13 +1156,13 @@ async function adminAddCategory() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/admin/categories`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/categories`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ name })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('adm-cat-name').value = '';
@@ -1151,12 +1184,12 @@ async function adminLoadAllOrders() {
     ordersDiv.innerHTML = '<p>Loading orders...</p>';
 
     try {
-        const response = await fetch(`${apiUrl}/orders`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/orders`, {
             method: 'GET',
             headers: getAuthHeaders()
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         ordersDiv.innerHTML = '';
 
         if (data.Success || data.success) {
@@ -1206,13 +1239,13 @@ async function adminUpdateOrderStatus() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/orders/${orderId}/status`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/orders/${orderId}/status`, {
             method: 'PATCH',
             headers: getAuthHeaders(),
             body: JSON.stringify({ status: parseInt(statusValue) })
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Order status updated successfully!', 'success');
@@ -1245,13 +1278,13 @@ async function uploadProfileImage() {
 
     try {
         const token = localStorage.getItem('jwtToken');
-        const response = await fetch(`${apiUrl}/users/profile-image`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/users/profile-image`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Profile image uploaded successfully', 'success');
@@ -1285,13 +1318,13 @@ async function uploadRestaurantImage() {
     formData.append('image', file);
 
     try {
-        const response = await fetch(`${apiUrl}/admin/restaurants/${restaurantId}/image`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/restaurants/${restaurantId}/image`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
             body: formData
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Restaurant image uploaded successfully', 'success');
@@ -1321,13 +1354,13 @@ async function uploadMenuItemImage() {
     formData.append('image', file);
 
     try {
-        const response = await fetch(`${apiUrl}/admin/menuitems/${menuItemId}/image`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/menuitems/${menuItemId}/image`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
             body: formData
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Menu item image uploaded successfully', 'success');
@@ -1357,12 +1390,12 @@ function loadInitialData() {
 
 async function loadUserProfile() {
     try {
-        const response = await fetch(`${apiUrl}/users/profile`, {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/users/profile`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
         });
 
-        const data = await response.json();
+        if (unauthorized) return;
         const profileData = data.Data || data.data;
         const imgPath = profileData?.ProfileImagePath || profileData?.profileImagePath;
         if ((data.Success || data.success) && imgPath) {
@@ -1378,6 +1411,7 @@ async function loadUserProfile() {
 }
 
 window.addEventListener('load', () => {
+    logout();
     showAppSection();
     updateAuthUI();
     loadInitialData();

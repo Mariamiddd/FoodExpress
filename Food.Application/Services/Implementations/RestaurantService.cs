@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Food.Application.Services.Implementationsg
+namespace Food.Application.Services.Implementations
 {
     public class RestaurantService : IRestaurantService
     {

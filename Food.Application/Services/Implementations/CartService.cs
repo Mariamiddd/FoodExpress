@@ -66,6 +66,33 @@ namespace Food.Application.Services.Implementations
             }
 
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
+            if (cart == null)
+            {
+                cart = new Cart
+                {
+                    UserId = userId
+                };
+                await _unitOfWork.Carts.AddAsync(cart);
+                await _unitOfWork.SaveAsync();
+            }
+
+            if (cart.CartItems.Count > 0)
+            {
+                var existingRestaurantId = cart.CartItems
+                    .Select(i => i.MenuItem?.RestaurantId)
+                    .FirstOrDefault(id => id.HasValue);
+
+                if (!existingRestaurantId.HasValue)
+                {
+                    var existingMenuItem = await _unitOfWork.Menu.GetByIdAsync(cart.CartItems[0].MenuItemId);
+                    existingRestaurantId = existingMenuItem?.RestaurantId;
+                }
+
+                if (existingRestaurantId.HasValue && existingRestaurantId.Value != menuItem.RestaurantId)
+                {
+                    throw new InvalidOperationException("Cart can only contain items from a single restaurant. Clear the cart before adding items from another restaurant.");
+                }
+            }
 
             var existingItem = cart.CartItems.FirstOrDefault(i => i.MenuItemId == dto.MenuItemId);
             if (existingItem != null)

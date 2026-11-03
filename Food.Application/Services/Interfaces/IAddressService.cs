@@ -14,5 +14,7 @@ namespace Food.Application.Interfaces
 
             Task<IEnumerable<AddressDTO>> GetUserAddressesAsync(
                 string userId);
+
+            Task<bool> DeleteAddressAsync(string userId, int addressId);
         }
     }
