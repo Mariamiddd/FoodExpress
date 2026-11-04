@@ -3,10 +3,12 @@ const apiUrl = '/api';
 // APP STATE
 let currentUser = null;
 let cart = [];
+let categories = [];
 let selectedRestaurantId = null;
+let selectedRestaurantName = '';
 
 // ============================================
-// UTILITY FUNCTIONS
+// UTILITY & API CLIENT FUNCTIONS
 // ============================================
 
 function showToast(message, type = 'info') {
@@ -24,50 +26,112 @@ function showToast(message, type = 'info') {
     }, 3500);
 }
 
-function getAuthHeaders() {
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function parseJwtPayload(token) {
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64));
+    } catch {
+        return null;
+    }
+}
+
+function isTokenValid(token) {
+    if (!token) return false;
+    const payload = parseJwtPayload(token);
+    if (!payload) return false;
+    if (!payload.exp) return true;
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    return payload.exp > nowInSeconds;
+}
+
+function isLoggedIn() {
     const token = localStorage.getItem('jwtToken');
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
+    return isTokenValid(token);
+}
+
+function clearSessionStorage() {
+    localStorage.removeItem('jwtToken');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    currentUser = null;
+    cart = [];
+    updateCartBadge();
+}
+
+function validateSessionOnStartup() {
+    const token = localStorage.getItem('jwtToken');
+    if (token && !isTokenValid(token)) {
+        clearSessionStorage();
+    }
+}
+
+function getAuthHeaders(includeJsonContentType = true) {
+    const token = localStorage.getItem('jwtToken');
+    const headers = {};
+    if (includeJsonContentType) {
+        headers['Content-Type'] = 'application/json';
+    }
+    if (token && isTokenValid(token)) {
         headers['Authorization'] = `Bearer ${token}`;
     }
     return headers;
+}
+
+function extractErrorMessage(data, fallback = 'Operation failed') {
+    if (!data) return fallback;
+    if (data.Errors || data.errors) {
+        const errObj = data.Errors || data.errors;
+        const firstKey = Object.keys(errObj)[0];
+        if (firstKey && Array.isArray(errObj[firstKey]) && errObj[firstKey].length > 0) {
+            return errObj[firstKey][0];
+        }
+    }
+    return data.Message || data.message || data.detail || data.title || fallback;
 }
 
 async function apiFetch(url, options = {}) {
     const response = await fetch(url, options);
     const text = await response.text();
     let data = {};
+
     if (text && text.trim()) {
         try {
             data = JSON.parse(text);
         } catch {
-            data = { Message: text };
+            data = { message: text };
         }
     }
 
     const headers = options.headers || {};
     const hadToken = !!(headers.Authorization || headers.authorization);
+
     if (response.status === 401 && hadToken) {
-        localStorage.removeItem('jwtToken');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('userName');
-        currentUser = null;
-        cart = [];
-        selectedRestaurantId = null;
+        clearSessionStorage();
         const modal = document.getElementById('auth-modal');
         if (modal) modal.style.display = 'none';
-        if (typeof updateAuthUI === 'function') updateAuthUI();
-        if (typeof showView === 'function') showView('restaurants');
-        showToast('Session expired. Please log in again.', 'error');
+        updateAuthUI();
+        showView('restaurants');
+        showToast('Your session has expired. Please log in again.', 'error');
         return { response, data, unauthorized: true };
     }
 
-    return { response, data, unauthorized: false };
-}
+    if (response.status === 403) {
+        showToast(extractErrorMessage(data, 'You do not have permission to perform this action.'), 'error');
+    }
 
-function isLoggedIn() {
-    return !!localStorage.getItem('jwtToken');
+    return { response, data, unauthorized: false };
 }
 
 // ============================================
@@ -76,6 +140,7 @@ function isLoggedIn() {
 
 function toggleAuthModal() {
     const modal = document.getElementById('auth-modal');
+    if (!modal) return;
     if (modal.style.display === 'none' || !modal.style.display) {
         modal.style.display = 'flex';
     } else {
@@ -84,7 +149,8 @@ function toggleAuthModal() {
 }
 
 function closeAuthModal() {
-    document.getElementById('auth-modal').style.display = 'none';
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.style.display = 'none';
 }
 
 function toggleAuthTab(tab) {
@@ -101,6 +167,17 @@ function toggleAuthTab(tab) {
         registerForm.style.display = 'block';
         tabs.forEach((t, idx) => t.classList.toggle('active', idx === 1));
     }
+}
+
+function saveAuthSession(tokenData) {
+    const token = tokenData?.Token || tokenData?.token;
+    if (!token) return false;
+
+    localStorage.setItem('jwtToken', token);
+    localStorage.setItem('userId', tokenData.UserId || tokenData.userId || '');
+    localStorage.setItem('userEmail', tokenData.Email || tokenData.email || '');
+    localStorage.setItem('userName', tokenData.UserName || tokenData.userName || '');
+    return true;
 }
 
 async function handleLogin(event) {
@@ -125,24 +202,17 @@ async function handleLogin(event) {
 
         if (response.ok && (data.Success || data.success)) {
             const tokenData = data.Data || data.data;
-            const token = tokenData?.Token || tokenData?.token;
-            if (token) {
-                localStorage.setItem('jwtToken', token);
-                localStorage.setItem('userId', tokenData.UserId || tokenData.userId || '');
-                localStorage.setItem('userEmail', tokenData.Email || tokenData.email || '');
-                localStorage.setItem('userName', tokenData.UserName || tokenData.userName || '');
-
+            if (saveAuthSession(tokenData)) {
                 showToast('Login successful!', 'success');
                 document.getElementById('login-form-modal').reset();
                 closeAuthModal();
                 updateAuthUI();
                 loadInitialData();
             } else {
-                showToast('No token in response', 'error');
+                showToast('No token received from server', 'error');
             }
         } else {
-            let errorMessage = data.Message || data.message || 'Invalid email or password.';
-            showToast(errorMessage, 'error');
+            showToast(extractErrorMessage(data, 'Invalid email or password.'), 'error');
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -183,19 +253,20 @@ async function handleRegister(event) {
         if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
-            showToast('Registration successful! Please login.', 'success');
             document.getElementById('register-form-modal').reset();
-            toggleAuthTab('login');
-        } else {
-            let errorMessage = data.Message || data.message || 'Registration failed';
-            if (data.Errors || data.errors) {
-                const errObj = data.Errors || data.errors;
-                const firstKey = Object.keys(errObj)[0];
-                if (firstKey && errObj[firstKey]?.length) {
-                    errorMessage = errObj[firstKey][0];
-                }
+            const tokenData = data.Data || data.data;
+
+            if (saveAuthSession(tokenData)) {
+                showToast('Account created and logged in!', 'success');
+                closeAuthModal();
+                updateAuthUI();
+                loadInitialData();
+            } else {
+                showToast('Registration successful! Please login.', 'success');
+                toggleAuthTab('login');
             }
-            showToast(errorMessage, 'error');
+        } else {
+            showToast(extractErrorMessage(data, 'Registration failed'), 'error');
         }
     } catch (error) {
         console.error('Register error:', error);
@@ -203,22 +274,23 @@ async function handleRegister(event) {
     }
 }
 
-function logout() {
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
-    currentUser = null;
-    cart = [];
+function logout(silent = false) {
+    clearSessionStorage();
     selectedRestaurantId = null;
 
-    document.getElementById('auth-modal').style.display = 'none';
-    document.getElementById('login-form-modal').reset();
-    document.getElementById('register-form-modal').reset();
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.style.display = 'none';
+
+    const loginForm = document.getElementById('login-form-modal');
+    const regForm = document.getElementById('register-form-modal');
+    if (loginForm) loginForm.reset();
+    if (regForm) regForm.reset();
 
     updateAuthUI();
     showView('restaurants');
-    showToast('Logged out successfully', 'info');
+    if (!silent) {
+        showToast('Logged out successfully', 'info');
+    }
 }
 
 // ============================================
@@ -258,7 +330,8 @@ function updateAuthUI() {
 }
 
 function showAppSection() {
-    document.getElementById('app-section').style.display = 'block';
+    const appSection = document.getElementById('app-section');
+    if (appSection) appSection.style.display = 'block';
 }
 
 function showView(viewName) {
@@ -280,6 +353,7 @@ function showView(viewName) {
     }
 
     if (viewName === 'restaurants') {
+        loadCategories();
         loadRestaurants();
     } else if (viewName === 'cart') {
         loadCartFromBackend();
@@ -290,13 +364,121 @@ function showView(viewName) {
         loadAddresses();
     } else if (viewName === 'admin') {
         checkAdminAccess();
+        loadCategories();
         adminLoadAllOrders();
     }
 }
 
 // ============================================
-// RESTAURANTS & MENUS FUNCTIONS
+// CATEGORIES, RESTAURANTS & MENUS FUNCTIONS
 // ============================================
+
+async function loadCategories() {
+    try {
+        const { response, data } = await apiFetch(`${apiUrl}/menu/categories`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        if (response.ok && (data.Success || data.success)) {
+            categories = data.Data || data.data || [];
+            renderCategoryFilters();
+            renderAdminCategoryHint();
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+    }
+}
+
+function renderCategoryFilters() {
+    const container = document.getElementById('category-filters');
+    if (!container) return;
+
+    if (!categories.length) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const pillsHtml = categories.map(cat => {
+        const cId = cat.id ?? cat.Id;
+        const cName = escapeHtml(cat.name ?? cat.Name);
+        return `<button class="pill-btn" onclick="filterMenuByCategory(${cId}, '${cName}')">${cName}</button>`;
+    }).join('');
+
+    container.innerHTML = `<span class="pill-label">Categories:</span> ${pillsHtml}`;
+}
+
+function renderAdminCategoryHint() {
+    const hint = document.getElementById('admin-categories-hint');
+    if (!hint) return;
+
+    if (!categories.length) {
+        hint.textContent = '';
+        return;
+    }
+
+    hint.innerHTML = '<strong>Available IDs:</strong> ' + categories
+        .map(c => `<span class="badge-muted">#${c.id ?? c.Id}: ${escapeHtml(c.name ?? c.Name)}</span>`)
+        .join(' ');
+}
+
+async function filterMenuByCategory(categoryId, categoryName) {
+    const menuList = document.getElementById('menu-list');
+    const menuContainer = document.getElementById('menu-container');
+    if (!menuList || !menuContainer) return;
+
+    try {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/menu/category/${categoryId}`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        if (unauthorized) return;
+
+        if (response.ok && (data.Success || data.success)) {
+            const items = data.Data || data.data || [];
+            renderMenuItems(items, `Category: ${categoryName}`);
+        }
+    } catch (error) {
+        console.error('Error filtering menu by category:', error);
+        showToast('Error loading category items', 'error');
+    }
+}
+
+function renderRestaurantCards(restaurants) {
+    const listElement = document.getElementById('restaurants-list');
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    if (!restaurants || restaurants.length === 0) {
+        listElement.innerHTML = '<p class="empty-state">No restaurants found.</p>';
+        return;
+    }
+
+    restaurants.forEach(restaurant => {
+        const rId = restaurant.id ?? restaurant.Id;
+        const rName = escapeHtml(restaurant.name ?? restaurant.Name);
+        const rAddress = escapeHtml(restaurant.address ?? restaurant.Address);
+        const rImg = restaurant.imagePath ?? restaurant.ImagePath;
+
+        const card = document.createElement('div');
+        card.className = 'card restaurant-card';
+        const imageHtml = rImg
+            ? `<img src="/uploads/${encodeURI(rImg)}" alt="${rName}" class="card-img-lg">`
+            : `<div class="card-img-placeholder card-img-lg"><span>${rName}</span></div>`;
+
+        card.innerHTML = `
+            ${imageHtml}
+            <div class="card-header-row">
+                <h3>${rName}</h3>
+                <span class="badge-muted">ID: #${rId}</span>
+            </div>
+            <p class="text-muted">${rAddress}</p>
+            <button onclick="loadMenu(${rId}, '${rName.replace(/'/g, "\\'")}')" class="btn-primary btn-block">View Menu</button>
+        `;
+        listElement.appendChild(card);
+    });
+}
 
 async function loadRestaurants() {
     const listElement = document.getElementById('restaurants-list');
@@ -311,30 +493,10 @@ async function loadRestaurants() {
         });
 
         if (unauthorized) return;
-        listElement.innerHTML = '';
 
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             const restaurants = data.Data || data.data || [];
-            restaurants.forEach(restaurant => {
-                const rId = restaurant.id || restaurant.Id;
-                const rName = restaurant.name || restaurant.Name;
-                const rAddress = restaurant.address || restaurant.Address;
-                const rImg = restaurant.imagePath || restaurant.ImagePath;
-
-                const card = document.createElement('div');
-                card.className = 'card';
-                const imageHtml = rImg
-                    ? `<img src="/uploads/${rImg}" alt="${rName}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">`
-                    : '<div style="width: 100%; height: 200px; background: #f0f0f0; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center;">No Image</div>';
-
-                card.innerHTML = `
-                    ${imageHtml}
-                    <h3>${rName} <small style="font-size: 0.75rem; color: #888;">(ID: ${rId})</small></h3>
-                    <p>${rAddress}</p>
-                    <button onclick="loadMenu(${rId})" class="btn-primary">View Menu</button>
-                `;
-                listElement.appendChild(card);
-            });
+            renderRestaurantCards(restaurants);
         } else {
             listElement.innerHTML = '<p>Failed to load restaurants</p>';
         }
@@ -344,12 +506,63 @@ async function loadRestaurants() {
     }
 }
 
-async function loadMenu(restaurantId) {
-    selectedRestaurantId = restaurantId;
+function renderMenuItems(items, titleText) {
     const menuList = document.getElementById('menu-list');
     const menuContainer = document.getElementById('menu-container');
+    const menuTitle = document.getElementById('menu-title');
 
     if (!menuList || !menuContainer) return;
+    menuList.innerHTML = '';
+
+    if (menuTitle) menuTitle.textContent = titleText;
+    menuContainer.style.display = 'block';
+
+    if (!items || items.length === 0) {
+        menuList.innerHTML = '<p class="empty-state">No menu items found.</p>';
+        return;
+    }
+
+    items.forEach(item => {
+        const mId = item.id ?? item.Id;
+        const mName = item.name ?? item.Name ?? 'Item';
+        const mPrice = item.price ?? item.Price ?? 0;
+        const mImg = item.imagePath ?? item.ImagePath;
+        const mAvail = item.isAvailable ?? item.IsAvailable ?? true;
+        const mCat = item.categoryName ?? item.CategoryName ?? '';
+        const mRest = item.restaurantName ?? item.RestaurantName ?? '';
+        const safeName = String(mName).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+        const card = document.createElement('div');
+        card.className = 'card menu-card';
+        const imageHtml = mImg
+            ? `<img src="/uploads/${encodeURI(mImg)}" alt="${escapeHtml(mName)}" class="card-img-sm">`
+            : `<div class="card-img-placeholder card-img-sm"><span>${escapeHtml(mName)}</span></div>`;
+
+        card.innerHTML = `
+            ${imageHtml}
+            <div class="card-header-row">
+                <h4>${escapeHtml(mName)}</h4>
+                <span class="badge-muted">ID: #${mId}</span>
+            </div>
+            <div class="meta-row">
+                ${mCat ? `<span class="badge-category">${escapeHtml(mCat)}</span>` : ''}
+                ${mRest ? `<span class="text-muted small-note">${escapeHtml(mRest)}</span>` : ''}
+            </div>
+            <p class="price-tag">$${Number(mPrice).toFixed(2)}</p>
+            <div class="menu-action-row">
+                <input type="number" min="1" value="1" id="qty-${mId}" class="qty-input">
+                <button onclick="addToCart(${mId}, ${mPrice}, '${safeName}')" class="btn-primary" ${!mAvail ? 'disabled' : ''}>
+                    ${mAvail ? 'Add to Cart' : 'Unavailable'}
+                </button>
+            </div>
+        `;
+        menuList.appendChild(card);
+    });
+}
+
+async function loadMenu(restaurantId, restaurantName = '') {
+    selectedRestaurantId = restaurantId;
+    selectedRestaurantName = restaurantName;
 
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/restaurants/${restaurantId}/menu`, {
@@ -358,42 +571,16 @@ async function loadMenu(restaurantId) {
         });
 
         if (unauthorized) return;
-        menuList.innerHTML = '';
 
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             const items = data.Data || data.data || [];
-            if (items.length === 0) {
-                menuList.innerHTML = '<p>No menu items for this restaurant yet.</p>';
-            }
-
-            items.forEach(item => {
-                const mId = item.id || item.Id;
-                const mName = item.name || item.Name;
-                const mPrice = item.price ?? item.Price ?? 0;
-                const mImg = item.imagePath || item.ImagePath;
-                const mAvail = item.isAvailable ?? item.IsAvailable ?? true;
-                const safeName = String(mName).replace(/'/g, "\\'");
-
-                const card = document.createElement('div');
-                card.className = 'card';
-                const imageHtml = mImg
-                    ? `<img src="/uploads/${mImg}" alt="${mName}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">`
-                    : '<div style="width: 100%; height: 150px; background: #f0f0f0; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center;">No Image</div>';
-
-                card.innerHTML = `
-                    ${imageHtml}
-                    <h4>${mName} <small style="font-size: 0.75rem; color: #888;">(ID: ${mId})</small></h4>
-                    <p><strong>$${Number(mPrice).toFixed(2)}</strong></p>
-                    <input type="number" min="1" value="1" id="qty-${mId}" style="width: 70px;">
-                    <button onclick="addToCart(${mId}, ${mPrice}, '${safeName}')" class="btn-primary" ${!mAvail ? 'disabled' : ''}>
-                        ${mAvail ? 'Add to Cart' : 'Unavailable'}
-                    </button>
-                `;
-                menuList.appendChild(card);
-            });
-
-            document.getElementById('menu-title').textContent = `Menu (Restaurant #${restaurantId})`;
-            menuContainer.style.display = 'block';
+            const title = restaurantName
+                ? `Menu — ${restaurantName} (Restaurant #${restaurantId})`
+                : `Menu (Restaurant #${restaurantId})`;
+            renderMenuItems(items, title);
+            document.getElementById('menu-container')?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            showToast(extractErrorMessage(data, 'Could not load menu'), 'error');
         }
     } catch (error) {
         console.error('Error loading menu:', error);
@@ -408,8 +595,6 @@ async function searchRestaurants() {
         return;
     }
 
-    const listElement = document.getElementById('restaurants-list');
-
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/restaurants/search?q=${encodeURIComponent(query)}`, {
             method: 'GET',
@@ -417,30 +602,12 @@ async function searchRestaurants() {
         });
 
         if (unauthorized) return;
-        listElement.innerHTML = '';
 
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             const restaurants = data.Data || data.data || [];
-            if (restaurants.length === 0) {
-                listElement.innerHTML = '<p>No restaurants found</p>';
-                return;
-            }
-
-            restaurants.forEach(restaurant => {
-                const rId = restaurant.id || restaurant.Id;
-                const rName = restaurant.name || restaurant.Name;
-                const rAddress = restaurant.address || restaurant.Address;
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <h3>${rName}</h3>
-                    <p>${rAddress}</p>
-                    <button onclick="loadMenu(${rId})" class="btn-primary">View Menu</button>
-                `;
-                listElement.appendChild(card);
-            });
+            renderRestaurantCards(restaurants);
         } else {
-            listElement.innerHTML = '<p>No restaurants found</p>';
+            renderRestaurantCards([]);
         }
     } catch (error) {
         console.error('Error searching restaurants:', error);
@@ -455,9 +622,6 @@ async function searchMenus() {
         return;
     }
 
-    const menuList = document.getElementById('menu-list');
-    const menuContainer = document.getElementById('menu-container');
-
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/menu/search?q=${encodeURIComponent(query)}`, {
             method: 'GET',
@@ -465,35 +629,10 @@ async function searchMenus() {
         });
 
         if (unauthorized) return;
-        menuList.innerHTML = '';
 
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             const items = data.Data || data.data || [];
-            if (items.length === 0) {
-                menuList.innerHTML = '<p>No items found</p>';
-                menuContainer.style.display = 'block';
-                return;
-            }
-
-            items.forEach(item => {
-                const mId = item.id || item.Id;
-                const mName = item.name || item.Name;
-                const mPrice = item.price ?? item.Price ?? 0;
-                const safeName = String(mName).replace(/'/g, "\\'");
-
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <h4>${mName}</h4>
-                    <p><strong>$${Number(mPrice).toFixed(2)}</strong></p>
-                    <input type="number" min="1" value="1" id="qty-${mId}" style="width: 70px;">
-                    <button onclick="addToCart(${mId}, ${mPrice}, '${safeName}')" class="btn-primary">Add to Cart</button>
-                `;
-                menuList.appendChild(card);
-            });
-
-            document.getElementById('menu-title').textContent = `Search Results`;
-            menuContainer.style.display = 'block';
+            renderMenuItems(items, `Menu Search Results for "${query}"`);
         }
     } catch (error) {
         console.error('Error searching menus:', error);
@@ -505,6 +644,13 @@ async function searchMenus() {
 // CART FUNCTIONS
 // ============================================
 
+function updateCartBadge() {
+    const badge = document.getElementById('cart-badge');
+    if (!badge) return;
+    const totalCount = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    badge.textContent = totalCount;
+}
+
 async function addToCart(itemId, price, name) {
     if (!isLoggedIn()) {
         showToast('Please login to add items to cart', 'info');
@@ -513,7 +659,7 @@ async function addToCart(itemId, price, name) {
     }
 
     const qtyInput = document.getElementById(`qty-${itemId}`);
-    const quantity = parseInt(qtyInput?.value) || 1;
+    const quantity = parseInt(qtyInput?.value, 10) || 1;
 
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/cart/items`, {
@@ -529,9 +675,9 @@ async function addToCart(itemId, price, name) {
 
         if (response.ok && (data.Success || data.success)) {
             showToast(`${name} added to cart!`, 'success');
-            loadCartFromBackend();
+            await loadCartFromBackend();
         } else {
-            showToast(data.Message || data.message || 'Failed to add item to cart', 'error');
+            showToast(extractErrorMessage(data, 'Failed to add item to cart'), 'error');
         }
     } catch (error) {
         console.error('Error adding to cart:', error);
@@ -540,6 +686,13 @@ async function addToCart(itemId, price, name) {
 }
 
 async function loadCartFromBackend() {
+    if (!isLoggedIn()) {
+        cart = [];
+        updateCartBadge();
+        displayCart();
+        return;
+    }
+
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/cart`, {
             method: 'GET',
@@ -552,18 +705,21 @@ async function loadCartFromBackend() {
             const cartData = data.Data || data.data;
             const items = cartData?.Items || cartData?.items || [];
             cart = items.map(item => ({
-                itemId: item.MenuItemId || item.menuItemId,
-                name: item.Name || item.name,
+                itemId: item.MenuItemId ?? item.menuItemId,
+                name: item.Name ?? item.name,
                 price: item.Price ?? item.price ?? 0,
-                quantity: item.Quantity ?? item.quantity ?? 1
+                quantity: item.Quantity ?? item.quantity ?? 1,
+                restaurantName: item.RestaurantName ?? item.restaurantName ?? cartData?.RestaurantName ?? cartData?.restaurantName ?? ''
             }));
         } else {
             cart = [];
         }
+        updateCartBadge();
         displayCart();
     } catch (error) {
         console.error('Error loading cart from backend:', error);
         cart = [];
+        updateCartBadge();
         displayCart();
     }
 }
@@ -573,7 +729,7 @@ function displayCart() {
     if (!cartItemsDiv) return;
 
     if (cart.length === 0) {
-        cartItemsDiv.innerHTML = '<p>Your cart is empty</p>';
+        cartItemsDiv.innerHTML = '<div class="card"><p>Your cart is empty. Browse restaurants to add delicious items!</p></div>';
         loadAddressesForCheckout();
         return;
     }
@@ -581,31 +737,74 @@ function displayCart() {
     cartItemsDiv.innerHTML = '';
     let total = 0;
 
+    if (cart[0]?.restaurantName) {
+        const restBanner = document.createElement('div');
+        restBanner.className = 'cart-restaurant-banner';
+        restBanner.innerHTML = `Ordering from: <strong>${escapeHtml(cart[0].restaurantName)}</strong>`;
+        cartItemsDiv.appendChild(restBanner);
+    }
+
     cart.forEach((item, index) => {
         const itemTotal = item.price * item.quantity;
         total += itemTotal;
 
         const cartItem = document.createElement('div');
-        cartItem.className = 'card';
+        cartItem.className = 'card cart-item-card';
         cartItem.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="cart-item-row">
                 <div>
-                    <h4>${item.name}</h4>
-                    <p>$${Number(item.price).toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}</p>
+                    <h4>${escapeHtml(item.name)}</h4>
+                    <p class="text-muted">$${Number(item.price).toFixed(2)} each &bull; Subtotal: <strong>$${itemTotal.toFixed(2)}</strong></p>
                 </div>
-                <button onclick="removeFromCart(${index})" class="btn-accent">Remove</button>
+                <div class="cart-controls">
+                    <button onclick="changeCartItemQuantity(${index}, -1)" class="btn-outline btn-qty" title="Decrease quantity">&minus;</button>
+                    <span class="cart-qty-display">${item.quantity}</span>
+                    <button onclick="changeCartItemQuantity(${index}, 1)" class="btn-outline btn-qty" title="Increase quantity">&#43;</button>
+                    <button onclick="removeFromCart(${index})" class="btn-accent btn-small">Remove</button>
+                </div>
             </div>
         `;
         cartItemsDiv.appendChild(cartItem);
     });
 
     const totalDiv = document.createElement('div');
-    totalDiv.className = 'card';
-    totalDiv.style.fontWeight = 'bold';
+    totalDiv.className = 'card cart-total-card';
     totalDiv.innerHTML = `<h3>Total: $${total.toFixed(2)}</h3>`;
     cartItemsDiv.appendChild(totalDiv);
 
     loadAddressesForCheckout();
+}
+
+async function changeCartItemQuantity(index, delta) {
+    const item = cart[index];
+    if (!item) return;
+
+    const newQuantity = item.quantity + delta;
+    if (newQuantity <= 0) {
+        await removeFromCart(index);
+        return;
+    }
+
+    try {
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/cart/items/${item.itemId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ quantity: newQuantity })
+        });
+
+        if (unauthorized) return;
+
+        if (response.ok && (data.Success || data.success)) {
+            item.quantity = newQuantity;
+            updateCartBadge();
+            displayCart();
+        } else {
+            showToast(extractErrorMessage(data, 'Failed to update quantity'), 'error');
+        }
+    } catch (error) {
+        console.error('Error updating cart quantity:', error);
+        showToast('Error updating item quantity', 'error');
+    }
 }
 
 async function removeFromCart(index) {
@@ -621,10 +820,11 @@ async function removeFromCart(index) {
 
         if (response.ok && (data.Success || data.success)) {
             cart.splice(index, 1);
+            updateCartBadge();
             displayCart();
             showToast('Item removed from cart', 'info');
         } else {
-            showToast(data.Message || data.message || 'Failed to remove item', 'error');
+            showToast(extractErrorMessage(data, 'Failed to remove item'), 'error');
         }
     } catch (error) {
         console.error('Error removing from cart:', error);
@@ -634,12 +834,11 @@ async function removeFromCart(index) {
 
 async function loadAddressesForCheckout() {
     const select = document.getElementById('checkout-address');
-    const checkoutBtn = document.querySelector('[onclick="checkout()"]');
+    const checkoutBtn = document.getElementById('checkout-btn') || document.querySelector('[onclick="checkout()"]');
 
-    if (!select) return;
+    if (!select || !isLoggedIn()) return;
 
     try {
-        // Call /api/addresses/my to match AddressesController
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/addresses/my`, {
             method: 'GET',
             headers: getAuthHeaders()
@@ -658,19 +857,19 @@ async function loadAddressesForCheckout() {
             const addresses = data.Data || data.data || [];
 
             if (addresses.length === 0) {
-                select.innerHTML = '<option value="">No addresses. Add one in Profile first!</option>';
+                select.innerHTML = '<option value="">No addresses found. Add one in Profile first!</option>';
                 if (checkoutBtn) checkoutBtn.disabled = true;
                 return;
             }
 
             addresses.forEach(addr => {
                 const option = document.createElement('option');
-                option.value = addr.id || addr.Id;
-                option.textContent = `${addr.city || addr.City}, ${addr.street || addr.Street}`;
+                option.value = addr.id ?? addr.Id;
+                option.textContent = `${addr.city ?? addr.City}, ${addr.street ?? addr.Street}`;
                 select.appendChild(option);
             });
 
-            if (checkoutBtn) checkoutBtn.disabled = false;
+            if (checkoutBtn) checkoutBtn.disabled = cart.length === 0;
         }
     } catch (error) {
         console.error('Error loading addresses:', error);
@@ -691,7 +890,7 @@ async function checkout() {
         return;
     }
 
-    const checkoutBtn = document.querySelector('[onclick="checkout()"]');
+    const checkoutBtn = document.getElementById('checkout-btn') || document.querySelector('[onclick="checkout()"]');
     if (checkoutBtn) {
         checkoutBtn.disabled = true;
         checkoutBtn.textContent = 'Placing order...';
@@ -702,27 +901,22 @@ async function checkout() {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({
-                addressId: parseInt(addressId)
+                addressId: parseInt(addressId, 10)
             })
         });
 
         if (unauthorized) return;
 
-        if (!response.ok) {
-            const errorMsg = data.Message || data.message || 'Checkout failed';
-            showToast(errorMsg, 'error');
-            return;
-        }
-
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             cart = [];
+            updateCartBadge();
             displayCart();
             showToast('Order placed successfully!', 'success');
             setTimeout(() => {
                 showView('orders');
-            }, 800);
+            }, 600);
         } else {
-            showToast(data.Message || data.message || 'Order creation failed', 'error');
+            showToast(extractErrorMessage(data, 'Order creation failed'), 'error');
         }
     } catch (error) {
         console.error('Checkout exception:', error);
@@ -739,6 +933,14 @@ async function checkout() {
 // ORDERS FUNCTIONS
 // ============================================
 
+function getStatusBadgeClass(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'delivered') return 'status-delivered';
+    if (normalized === 'cancelled') return 'status-cancelled';
+    if (normalized === 'ontheway' || normalized === 'preparing') return 'status-progress';
+    return 'status-created';
+}
+
 async function loadOrders() {
     const ordersDiv = document.getElementById('my-orders-list');
     if (!ordersDiv) return;
@@ -754,33 +956,42 @@ async function loadOrders() {
         if (unauthorized) return;
         ordersDiv.innerHTML = '';
 
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             const orders = data.Data || data.data || [];
 
             if (orders.length === 0) {
-                ordersDiv.innerHTML = '<p>No orders yet</p>';
+                ordersDiv.innerHTML = '<div class="card"><p>No orders yet. Place your first order from the Restaurants tab!</p></div>';
                 return;
             }
 
             orders.forEach(order => {
                 const oId = order.id ?? order.Id;
-                const oStatus = order.status ?? order.Status;
-                const oTotal = order.totalPrice ?? order.TotalPrice ?? order.total ?? 0;
+                const oStatus = order.status ?? order.Status ?? 'Created';
+                const oTotal = order.totalPrice ?? order.TotalPrice ?? 0;
                 const oDate = order.createdAt ?? order.CreatedAt;
+                const oRest = order.restaurantName ?? order.RestaurantName ?? `Restaurant #${order.restaurantId ?? order.RestaurantId}`;
+                const oAddr = order.deliveryAddress ?? order.DeliveryAddress ?? '';
                 const items = order.orderItems ?? order.OrderItems ?? [];
 
+                const canCancel = oStatus === 'Created' || oStatus === 'Confirmed';
+
                 const itemsHtml = items.map(i =>
-                    `<li>${i.name || i.Name} x${i.quantity || i.Quantity} ($${Number(i.unitPrice ?? i.UnitPrice ?? 0).toFixed(2)})</li>`
+                    `<li>${escapeHtml(i.name || i.Name)} &times; ${i.quantity || i.Quantity} ($${Number(i.unitPrice ?? i.UnitPrice ?? 0).toFixed(2)})</li>`
                 ).join('');
 
                 const card = document.createElement('div');
-                card.className = 'card';
+                card.className = 'card order-card';
                 card.innerHTML = `
-                    <h3>Order #${oId}</h3>
-                    <p><strong>Status:</strong> ${oStatus}</p>
+                    <div class="card-header-row">
+                        <h3>Order #${oId}</h3>
+                        <span class="status-badge ${getStatusBadgeClass(oStatus)}">${escapeHtml(oStatus)}</span>
+                    </div>
+                    <p><strong>Restaurant:</strong> ${escapeHtml(oRest)}</p>
+                    ${oAddr ? `<p><strong>Delivery Address:</strong> ${escapeHtml(oAddr)}</p>` : ''}
                     <p><strong>Total:</strong> $${Number(oTotal).toFixed(2)}</p>
-                    <p><strong>Date:</strong> ${oDate ? new Date(oDate).toLocaleString() : ''}</p>
-                    ${itemsHtml ? `<ul style="margin-top: 10px; padding-left: 20px;">${itemsHtml}</ul>` : ''}
+                    <p class="text-muted small-note">${oDate ? new Date(oDate).toLocaleString() : ''}</p>
+                    ${itemsHtml ? `<ul class="order-items-list">${itemsHtml}</ul>` : ''}
+                    ${canCancel ? `<button onclick="cancelMyOrder(${oId})" class="btn-accent btn-small section-spacer-sm">Cancel Order</button>` : ''}
                 `;
                 ordersDiv.appendChild(card);
             });
@@ -790,6 +1001,31 @@ async function loadOrders() {
     } catch (error) {
         console.error('Error loading orders:', error);
         ordersDiv.innerHTML = '<p>Error loading orders</p>';
+    }
+}
+
+async function cancelMyOrder(orderId) {
+    if (!confirm(`Are you sure you want to cancel Order #${orderId}?`)) return;
+
+    try {
+        // OrderState.Cancelled == 5
+        const { response, data, unauthorized } = await apiFetch(`${apiUrl}/orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ status: 5 })
+        });
+
+        if (unauthorized) return;
+
+        if (response.ok && (data.Success || data.success)) {
+            showToast(`Order #${orderId} cancelled`, 'info');
+            loadOrders();
+        } else {
+            showToast(extractErrorMessage(data, 'Failed to cancel order'), 'error');
+        }
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        showToast('Error cancelling order', 'error');
     }
 }
 
@@ -810,7 +1046,7 @@ async function loadAddresses() {
         if (unauthorized) return;
         addressesDiv.innerHTML = '';
 
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             const addresses = data.Data || data.data || [];
 
             if (addresses.length === 0) {
@@ -819,14 +1055,16 @@ async function loadAddresses() {
             }
 
             addresses.forEach(addr => {
-                const aId = addr.id || addr.Id;
-                const aCity = addr.city || addr.City;
-                const aStreet = addr.street || addr.Street;
+                const aId = addr.id ?? addr.Id;
+                const aCity = escapeHtml(addr.city ?? addr.City);
+                const aStreet = escapeHtml(addr.street ?? addr.Street);
                 const card = document.createElement('div');
-                card.className = 'card';
+                card.className = 'card address-card';
                 card.innerHTML = `
-                    <h4>${aCity}, ${aStreet}</h4>
-                    <button onclick="deleteAddress(${aId})" class="btn-accent">Delete</button>
+                    <div class="card-header-row">
+                        <h4>${aCity}, ${aStreet}</h4>
+                        <button onclick="deleteAddress(${aId})" class="btn-accent btn-small">Delete</button>
+                    </div>
                 `;
                 addressesDiv.appendChild(card);
             });
@@ -866,7 +1104,7 @@ async function addAddress() {
             loadAddresses();
             loadAddressesForCheckout();
         } else {
-            showToast(data.Message || data.message || 'Failed to add address', 'error');
+            showToast(extractErrorMessage(data, 'Failed to add address'), 'error');
         }
     } catch (error) {
         console.error('Error adding address:', error);
@@ -888,8 +1126,9 @@ async function deleteAddress(addressId) {
         if (response.ok && (data.Success || data.success)) {
             showToast('Address deleted successfully', 'success');
             loadAddresses();
+            loadAddressesForCheckout();
         } else {
-            showToast(data.Message || data.message || 'Failed to delete address', 'error');
+            showToast(extractErrorMessage(data, 'Failed to delete address'), 'error');
         }
     } catch (error) {
         console.error('Error deleting address:', error);
@@ -901,33 +1140,30 @@ async function deleteAddress(addressId) {
 // ADMIN FUNCTIONS
 // ============================================
 
-async function checkAdminAccess() {
+function checkAdminAccess() {
     const token = localStorage.getItem('jwtToken');
     const adminBtn = document.getElementById('admin-nav-btn');
 
-    if (!token || !adminBtn) return;
+    if (!token || !adminBtn || !isTokenValid(token)) {
+        if (adminBtn) adminBtn.style.display = 'none';
+        return;
+    }
 
-    try {
-        const parts = token.split('.');
-        if (parts.length !== 3) {
-            adminBtn.style.display = 'none';
-            return;
-        }
+    const payload = parseJwtPayload(token);
+    if (!payload) {
+        adminBtn.style.display = 'none';
+        return;
+    }
 
-        const payload = JSON.parse(atob(parts[1]));
-        let roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
-            || payload['role']
-            || payload['roles']
-            || payload['Role'];
+    const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+        || payload['role']
+        || payload['roles']
+        || payload['Role'];
 
-        if (roles) {
-            const isAdmin = Array.isArray(roles) ? roles.includes('Admin') : roles === 'Admin';
-            adminBtn.style.display = isAdmin ? 'block' : 'none';
-        } else {
-            adminBtn.style.display = 'none';
-        }
-    } catch (error) {
-        console.error('Error checking admin access:', error);
+    if (roles) {
+        const isAdmin = Array.isArray(roles) ? roles.includes('Admin') : roles === 'Admin';
+        adminBtn.style.display = isAdmin ? 'block' : 'none';
+    } else {
         adminBtn.style.display = 'none';
     }
 }
@@ -953,13 +1189,13 @@ async function adminAddRestaurant() {
 
         if (unauthorized) return;
 
-        if (response.ok && (data.Success || data.success || data.restaurantId || data.RestaurantId)) {
+        if (response.ok && (data.Success || data.success)) {
             name.value = '';
             address.value = '';
             showToast('Restaurant added successfully!', 'success');
             loadRestaurants();
         } else {
-            showToast(data.Message || data.message || 'Failed to add restaurant', 'error');
+            showToast(extractErrorMessage(data, 'Failed to add restaurant'), 'error');
         }
     } catch (error) {
         console.error('Error adding restaurant:', error);
@@ -968,7 +1204,7 @@ async function adminAddRestaurant() {
 }
 
 async function adminUpdateRestaurant() {
-    const id = parseInt(document.getElementById('adm-rest-id').value);
+    const id = parseInt(document.getElementById('adm-rest-id').value, 10);
     const name = document.getElementById('adm-rest-name').value.trim();
     const address = document.getElementById('adm-rest-address').value.trim();
 
@@ -993,7 +1229,7 @@ async function adminUpdateRestaurant() {
             showToast('Restaurant updated successfully!', 'success');
             loadRestaurants();
         } else {
-            showToast(data.Message || data.message || 'Failed to update restaurant', 'error');
+            showToast(extractErrorMessage(data, 'Failed to update restaurant'), 'error');
         }
     } catch (error) {
         console.error('Error updating restaurant:', error);
@@ -1002,7 +1238,7 @@ async function adminUpdateRestaurant() {
 }
 
 async function adminDeleteRestaurant() {
-    const id = parseInt(document.getElementById('adm-rest-id').value);
+    const id = parseInt(document.getElementById('adm-rest-id').value, 10);
     if (!id) {
         showToast('Please enter restaurant ID', 'error');
         return;
@@ -1023,7 +1259,7 @@ async function adminDeleteRestaurant() {
             showToast('Restaurant deleted successfully!', 'success');
             loadRestaurants();
         } else {
-            showToast(data.Message || data.message || 'Failed to delete restaurant', 'error');
+            showToast(extractErrorMessage(data, 'Failed to delete restaurant'), 'error');
         }
     } catch (error) {
         console.error('Error deleting restaurant:', error);
@@ -1032,14 +1268,14 @@ async function adminDeleteRestaurant() {
 }
 
 async function adminAddMenuItem() {
-    const restId = parseInt(document.getElementById('adm-menu-restId').value);
-    const catId = parseInt(document.getElementById('adm-menu-catId').value);
+    const restId = parseInt(document.getElementById('adm-menu-restId').value, 10);
+    const catId = parseInt(document.getElementById('adm-menu-catId').value, 10);
     const name = document.getElementById('adm-menu-name').value.trim();
     const price = parseFloat(document.getElementById('adm-menu-price').value);
     const available = document.getElementById('adm-menu-avail').checked;
 
     if (!restId || !catId || !name || isNaN(price) || price <= 0) {
-        showToast('Please provide valid Restaurant ID, Category ID (1-5), Name, and Price', 'error');
+        showToast('Please provide valid Restaurant ID, Category ID, Name, and Price', 'error');
         return;
     }
 
@@ -1063,13 +1299,13 @@ async function adminAddMenuItem() {
             document.getElementById('adm-menu-catId').value = '';
             document.getElementById('adm-menu-name').value = '';
             document.getElementById('adm-menu-price').value = '';
-            document.getElementById('adm-menu-avail').checked = false;
+            document.getElementById('adm-menu-avail').checked = true;
             showToast('Menu item added successfully!', 'success');
             if (selectedRestaurantId === restId) {
-                loadMenu(restId);
+                loadMenu(restId, selectedRestaurantName);
             }
         } else {
-            showToast(data.Message || data.message || 'Failed to add menu item', 'error');
+            showToast(extractErrorMessage(data, 'Failed to add menu item'), 'error');
         }
     } catch (error) {
         console.error('Error adding menu item:', error);
@@ -1078,9 +1314,9 @@ async function adminAddMenuItem() {
 }
 
 async function adminUpdateMenuItem() {
-    const id = parseInt(document.getElementById('adm-menu-id').value);
-    const restId = parseInt(document.getElementById('adm-menu-restId').value) || 0;
-    const catId = parseInt(document.getElementById('adm-menu-catId').value);
+    const id = parseInt(document.getElementById('adm-menu-id').value, 10);
+    const restId = parseInt(document.getElementById('adm-menu-restId').value, 10) || 0;
+    const catId = parseInt(document.getElementById('adm-menu-catId').value, 10);
     const name = document.getElementById('adm-menu-name').value.trim();
     const price = parseFloat(document.getElementById('adm-menu-price').value);
     const available = document.getElementById('adm-menu-avail').checked;
@@ -1108,9 +1344,9 @@ async function adminUpdateMenuItem() {
 
         if (response.ok && (data.Success || data.success)) {
             showToast('Menu item updated successfully!', 'success');
-            if (selectedRestaurantId) loadMenu(selectedRestaurantId);
+            if (selectedRestaurantId) loadMenu(selectedRestaurantId, selectedRestaurantName);
         } else {
-            showToast(data.Message || data.message || 'Failed to update menu item', 'error');
+            showToast(extractErrorMessage(data, 'Failed to update menu item'), 'error');
         }
     } catch (error) {
         console.error('Error updating menu item:', error);
@@ -1119,7 +1355,7 @@ async function adminUpdateMenuItem() {
 }
 
 async function adminDeleteMenuItem() {
-    const id = parseInt(document.getElementById('adm-menu-id').value);
+    const id = parseInt(document.getElementById('adm-menu-id').value, 10);
     if (!id) {
         showToast('Please enter menu item ID', 'error');
         return;
@@ -1138,9 +1374,9 @@ async function adminDeleteMenuItem() {
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('adm-menu-id').value = '';
             showToast('Menu item deleted successfully!', 'success');
-            if (selectedRestaurantId) loadMenu(selectedRestaurantId);
+            if (selectedRestaurantId) loadMenu(selectedRestaurantId, selectedRestaurantName);
         } else {
-            showToast(data.Message || data.message || 'Failed to delete menu item', 'error');
+            showToast(extractErrorMessage(data, 'Failed to delete menu item'), 'error');
         }
     } catch (error) {
         console.error('Error deleting menu item:', error);
@@ -1166,14 +1402,23 @@ async function adminAddCategory() {
 
         if (response.ok && (data.Success || data.success)) {
             document.getElementById('adm-cat-name').value = '';
-            const catId = data.Data?.CategoryId || data.data?.categoryId;
+            const catId = data.Data?.CategoryId ?? data.data?.categoryId;
             showToast(`Category added! (ID: ${catId || 'created'})`, 'success');
+            loadCategories();
         } else {
-            showToast(data.Message || data.message || 'Failed to add category', 'error');
+            showToast(extractErrorMessage(data, 'Failed to add category'), 'error');
         }
     } catch (error) {
         console.error('Error adding category:', error);
         showToast('Error adding category', 'error');
+    }
+}
+
+function selectOrderForStatusUpdate(orderId) {
+    const input = document.getElementById('adm-ord-id');
+    if (input) {
+        input.value = orderId;
+        input.focus();
     }
 }
 
@@ -1192,7 +1437,7 @@ async function adminLoadAllOrders() {
         if (unauthorized) return;
         ordersDiv.innerHTML = '';
 
-        if (data.Success || data.success) {
+        if (response.ok && (data.Success || data.success)) {
             const orders = data.Data || data.data || [];
 
             if (orders.length === 0) {
@@ -1203,25 +1448,28 @@ async function adminLoadAllOrders() {
             orders.forEach(order => {
                 const oId = order.id ?? order.Id;
                 const oUser = order.userId ?? order.UserId;
-                const oStatus = order.status ?? order.Status;
+                const oStatus = order.status ?? order.Status ?? 'Created';
                 const oTotal = order.totalPrice ?? order.TotalPrice ?? 0;
                 const oDate = order.createdAt ?? order.CreatedAt;
+                const oRest = order.restaurantName ?? order.RestaurantName ?? `Restaurant #${order.restaurantId ?? order.RestaurantId}`;
 
                 const card = document.createElement('div');
-                card.className = 'card';
+                card.className = 'card order-card';
                 card.innerHTML = `
-                    <div>
+                    <div class="card-header-row">
                         <h4>Order #${oId}</h4>
-                        <p><strong>User ID:</strong> ${oUser}</p>
-                        <p><strong>Status:</strong> ${oStatus}</p>
-                        <p><strong>Total:</strong> $${Number(oTotal).toFixed(2)}</p>
-                        <p><strong>Order Date:</strong> ${oDate ? new Date(oDate).toLocaleString() : ''}</p>
+                        <span class="status-badge ${getStatusBadgeClass(oStatus)}">${escapeHtml(oStatus)}</span>
                     </div>
+                    <p><strong>Restaurant:</strong> ${escapeHtml(oRest)}</p>
+                    <p class="text-muted small-note"><strong>User ID:</strong> ${escapeHtml(oUser)}</p>
+                    <p><strong>Total:</strong> $${Number(oTotal).toFixed(2)}</p>
+                    <p class="text-muted small-note">${oDate ? new Date(oDate).toLocaleString() : ''}</p>
+                    <button onclick="selectOrderForStatusUpdate(${oId})" class="btn-outline btn-small section-spacer-sm">Select Order #${oId}</button>
                 `;
                 ordersDiv.appendChild(card);
             });
         } else {
-            ordersDiv.innerHTML = `<p>Error: ${data.Message || data.message || 'Failed to load orders'}</p>`;
+            ordersDiv.innerHTML = `<p>Error: ${escapeHtml(extractErrorMessage(data, 'Failed to load orders'))}</p>`;
         }
     } catch (error) {
         console.error('Error loading orders:', error);
@@ -1242,17 +1490,17 @@ async function adminUpdateOrderStatus() {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/orders/${orderId}/status`, {
             method: 'PATCH',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ status: parseInt(statusValue) })
+            body: JSON.stringify({ status: parseInt(statusValue, 10) })
         });
 
         if (unauthorized) return;
 
         if (response.ok && (data.Success || data.success)) {
-            showToast('Order status updated successfully!', 'success');
+            showToast(`Order #${orderId} status updated!`, 'success');
             document.getElementById('adm-ord-id').value = '';
             adminLoadAllOrders();
         } else {
-            showToast(data.Message || data.message || 'Failed to update order status', 'error');
+            showToast(extractErrorMessage(data, 'Failed to update order status'), 'error');
         }
     } catch (error) {
         console.error('Error updating order status:', error);
@@ -1277,10 +1525,9 @@ async function uploadProfileImage() {
     formData.append('image', file);
 
     try {
-        const token = localStorage.getItem('jwtToken');
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/users/profile-image`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: getAuthHeaders(false),
             body: formData
         });
 
@@ -1296,7 +1543,7 @@ async function uploadProfileImage() {
             }
             fileInput.value = '';
         } else {
-            showToast(data.Message || data.message || 'Failed to upload image', 'error');
+            showToast(extractErrorMessage(data, 'Failed to upload image'), 'error');
         }
     } catch (error) {
         console.error('Error uploading profile image:', error);
@@ -1320,7 +1567,7 @@ async function uploadRestaurantImage() {
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/restaurants/${restaurantId}/image`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
+            headers: getAuthHeaders(false),
             body: formData
         });
 
@@ -1332,7 +1579,7 @@ async function uploadRestaurantImage() {
             fileInput.value = '';
             loadRestaurants();
         } else {
-            showToast(data.Message || data.message || 'Failed to upload image', 'error');
+            showToast(extractErrorMessage(data, 'Failed to upload image'), 'error');
         }
     } catch (error) {
         console.error('Error uploading restaurant image:', error);
@@ -1356,7 +1603,7 @@ async function uploadMenuItemImage() {
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/admin/menuitems/${menuItemId}/image`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` },
+            headers: getAuthHeaders(false),
             body: formData
         });
 
@@ -1366,9 +1613,9 @@ async function uploadMenuItemImage() {
             showToast('Menu item image uploaded successfully', 'success');
             document.getElementById('adm-menu-img-id').value = '';
             fileInput.value = '';
-            if (selectedRestaurantId) loadMenu(selectedRestaurantId);
+            if (selectedRestaurantId) loadMenu(selectedRestaurantId, selectedRestaurantName);
         } else {
-            showToast(data.Message || data.message || 'Failed to upload image', 'error');
+            showToast(extractErrorMessage(data, 'Failed to upload image'), 'error');
         }
     } catch (error) {
         console.error('Error uploading menu item image:', error);
@@ -1376,11 +1623,43 @@ async function uploadMenuItemImage() {
     }
 }
 
+async function adminPromoteUser() {
+    const emailInput = document.getElementById('adm-promote-email');
+    const email = emailInput?.value.trim();
+
+    if (!email) {
+        showToast('Please enter a registered user email', 'error');
+        return;
+    }
+
+    try {
+        const { response, data, unauthorized } = await apiFetch(
+            `${apiUrl}/admin/users/promote?email=${encodeURIComponent(email)}`,
+            {
+                method: 'POST',
+                headers: getAuthHeaders()
+            }
+        );
+
+        if (unauthorized) return;
+
+        if (response.ok && (data.Success || data.success)) {
+            emailInput.value = '';
+            showToast(data.Message || data.message || `${email} promoted to Admin!`, 'success');
+        } else {
+            showToast(extractErrorMessage(data, 'Failed to promote user'), 'error');
+        }
+    } catch (error) {
+        console.error('Error promoting user:', error);
+        showToast('Error promoting user', 'error');
+    }
+}
 // ============================================
 // INITIALIZATION
 // ============================================
 
 function loadInitialData() {
+    loadCategories();
     loadRestaurants();
     if (isLoggedIn()) {
         loadUserProfile();
@@ -1389,20 +1668,33 @@ function loadInitialData() {
 }
 
 async function loadUserProfile() {
+    if (!isLoggedIn()) return;
+
     try {
         const { response, data, unauthorized } = await apiFetch(`${apiUrl}/users/profile`, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
+            headers: getAuthHeaders()
         });
 
         if (unauthorized) return;
-        const profileData = data.Data || data.data;
-        const imgPath = profileData?.ProfileImagePath || profileData?.profileImagePath;
-        if ((data.Success || data.success) && imgPath) {
+
+        if (response.ok && (data.Success || data.success)) {
+            const profileData = data.Data || data.data;
+            const userNameEl = document.getElementById('profile-username');
+            const emailEl = document.getElementById('profile-email');
+
+            if (userNameEl) userNameEl.textContent = `Username: ${profileData?.UserName || profileData?.userName || ''}`;
+            if (emailEl) emailEl.textContent = `Email: ${profileData?.Email || profileData?.email || ''}`;
+
+            const imgPath = profileData?.ProfileImagePath || profileData?.profileImagePath;
             const imagePreview = document.getElementById('profile-image-preview');
             if (imagePreview) {
-                imagePreview.src = `/uploads/${imgPath}`;
-                imagePreview.style.display = 'block';
+                if (imgPath) {
+                    imagePreview.src = `/uploads/${imgPath}`;
+                    imagePreview.style.display = 'block';
+                } else {
+                    imagePreview.style.display = 'none';
+                }
             }
         }
     } catch (error) {
@@ -1411,7 +1703,7 @@ async function loadUserProfile() {
 }
 
 window.addEventListener('load', () => {
-    logout();
+    validateSessionOnStartup();
     showAppSection();
     updateAuthUI();
     loadInitialData();

@@ -17,20 +17,24 @@ namespace Food.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Cart> GetCartByUserIdAsync(string userId)
+        public async Task<Cart?> GetCartByUserIdAsync(string userId)
         {
             return await _context.Carts
                 .Include(c => c.CartItems)
-                .ThenInclude(i => i.MenuItem)
+                    .ThenInclude(i => i.MenuItem)
+                        .ThenInclude(m => m.Restaurant)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
+
         public async Task AddAsync(Cart cart)
         {
             await _context.Carts.AddAsync(cart);
         }
+
         public void ClearCart(Cart cart)
         {
             _context.CartItems.RemoveRange(cart.CartItems);
+            cart.Clear();
         }
     }
 }

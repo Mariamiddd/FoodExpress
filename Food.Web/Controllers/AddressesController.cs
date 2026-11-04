@@ -1,5 +1,6 @@
 ﻿using Food.Application.DTOs;
 using Food.Application.Interfaces;
+using Food.Web.Repsonses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,9 +8,13 @@ using System.Security.Claims;
 
 namespace Food.Web.Controllers
 {
+    /// <summary>
+    /// Manages delivery addresses for the authenticated user.
+    /// </summary>
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class AddressesController : ControllerBase
     {
         private readonly IAddressService _addressService;
@@ -22,64 +27,52 @@ namespace Food.Web.Controllers
         private string GetUserId()
         {
             return User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? throw new UnauthorizedAccessException("User isnt authenticated");
+                ?? throw new UnauthorizedAccessException("User is not authenticated.");
         }
 
+        /// <summary>
+        /// Adds a new delivery address for the currently authenticated user.
+        /// </summary>
+        /// <param name="request">City and street address details.</param>
         [HttpPost]
-        public async Task<IActionResult> AddAddress(
-            [FromBody] CreateAddressDTO request)
+        [ProducesResponseType(typeof(ApiResponse<AddressDTO>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> AddAddress([FromBody] CreateAddressDTO request)
         {
-            var address = await _addressService.AddAddressAsync(
-                GetUserId(), request);
-            var response = new
-            {
-                Success = true,
-                Message = "Address added successfully",
-                Data = address,
-                Errors = (Dictionary<string, string[]>?)null
-            };
-
-            return StatusCode(201, response);
+            var address = await _addressService.AddAddressAsync(GetUserId(), request);
+            return StatusCode(
+                StatusCodes.Status201Created,
+                ApiResponse<AddressDTO>.OkResponse(address, "Address added successfully"));
         }
 
+        /// <summary>
+        /// Retrieves all delivery addresses belonging to the currently authenticated user.
+        /// </summary>
         [HttpGet("my")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<AddressDTO>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMyAddresses()
         {
-            var addresses =
-                await _addressService.GetUserAddressesAsync(GetUserId());
-            var response = new
-            {
-                Success = true,
-                Message = "User addresses retrieved successfully",
-                Data = addresses,
-                Errors = (Dictionary<string, string[]>?)null
-            };
-
-            return Ok(response);
+            var addresses = await _addressService.GetUserAddressesAsync(GetUserId());
+            return Ok(ApiResponse<IEnumerable<AddressDTO>>.OkResponse(addresses, "User addresses retrieved successfully"));
         }
 
+        /// <summary>
+        /// Deletes a delivery address owned by the currently authenticated user.
+        /// </summary>
+        /// <param name="id">The address ID to delete.</param>
         [HttpDelete("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteAddress(int id)
         {
             var deleted = await _addressService.DeleteAddressAsync(GetUserId(), id);
             if (!deleted)
             {
-                return NotFound(new
-                {
-                    Success = false,
-                    Message = "Address not found",
-                    Data = (object?)null,
-                    Errors = (Dictionary<string, string[]>?)null
-                });
+                return NotFound(ApiResponse<object>.FailResponse("Address not found"));
             }
 
-            return Ok(new
-            {
-                Success = true,
-                Message = "Address deleted successfully",
-                Data = (object?)null,
-                Errors = (Dictionary<string, string[]>?)null
-            });
+            return Ok(ApiResponse<object>.OkResponse(null, "Address deleted successfully"));
         }
     }
 }

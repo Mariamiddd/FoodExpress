@@ -12,44 +12,38 @@ namespace Food.Application.Profiles
     {
         public MappingProfile()
         {
-            //  map from Entity to DTO
+            // Address mappings
             CreateMap<Address, AddressDTO>();
-
-            //  map from DTO to Entity
             CreateMap<CreateAddressDTO, Address>();
 
-            //user mappungs
+            // User mappings
             CreateMap<RegisterDTO, ApplicationUser>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.UserName))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email));
 
-            //order mappings
+            // Order mappings
             CreateMap<Order, OrderDTO>()
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant != null ? src.Restaurant.Name : string.Empty))
+                .ForMember(dest => dest.DeliveryAddress, opt => opt.MapFrom(src => src.Address != null ? $"{src.Address.City}, {src.Address.Street}" : string.Empty))
                 .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems));
 
-            CreateMap<OrderItem, OrderItemDTO>();
+            CreateMap<OrderItem, OrderItemDTO>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.Name) ? src.Name : (src.MenuItem != null ? src.MenuItem.Name : string.Empty)));
 
-            // created mappings for Restaurant and MenuItem
+            // Restaurant, Category & MenuItem mappings
             CreateMap<CreateRestaurantDTO, Restaurant>();
             CreateMap<CreateMenuItemDTO, MenuItem>();
-
-            //category
             CreateMap<CreateCategoryDTO, Category>();
 
-            ///
             CreateMap<MenuItem, MenuItemDTO>()
-                .ForMember(dest => dest.RestaurantName,
-                    opt => opt.MapFrom(src => src.Restaurant.Name))
-                .ForMember(dest => dest.CategoryName,
-                    opt => opt.MapFrom(src => src.Category.Name));
+                .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant != null ? src.Restaurant.Name : string.Empty))
+                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : string.Empty));
 
             CreateMap<Restaurant, RestaurantDTO>()
                 .ForMember(dest => dest.MenuItems, opt => opt.MapFrom(src => src.MenuItems));
         }
-
-
     }
 }

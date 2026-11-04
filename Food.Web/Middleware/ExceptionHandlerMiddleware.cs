@@ -35,40 +35,42 @@ namespace Food.Web.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            // based on the type of exception, set the appropriate status code
-            var statusCode = exception switch
+            var (statusCode, title) = exception switch
             {
-                KeyNotFoundException => StatusCodes.Status404NotFound,
-                ArgumentException => StatusCodes.Status400BadRequest,
-                InvalidOperationException => StatusCodes.Status400BadRequest,
-                UnauthorizedAccessException => StatusCodes.Status403Forbidden,
-                _ => StatusCodes.Status500InternalServerError
+                KeyNotFoundException => (StatusCodes.Status404NotFound, "Resource Not Found"),
+                ArgumentException => (StatusCodes.Status400BadRequest, "Invalid Argument"),
+                InvalidOperationException => (StatusCodes.Status400BadRequest, "Business Rule Violation"),
+                UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Access Denied"),
+                _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
             };
 
-            // logging the exception 
             if (statusCode == StatusCodes.Status500InternalServerError)
-                _logger.LogError(exception, "Unhandled exception occurred");
+                _logger.LogError(exception, "Unhandled exception occurred on {Method} {Path}", context.Request.Method, context.Request.Path);
             else
-                _logger.LogWarning(exception, "Handled exception: {Message}", exception.Message);
+                _logger.LogWarning("Handled domain exception ({StatusCode}): {Message}", statusCode, exception.Message);
 
-            // Determine the message to return based on the status code
-            var message = statusCode == StatusCodes.Status500InternalServerError ?
-                "An unexpected error occurred while processing your request. Please contact support if the problem persists." :
-                exception.Message;
+            var detailMessage = statusCode == StatusCodes.Status500InternalServerError
+                ? "An unexpected error occurred while processing your request."
+                : exception.Message;
 
-            // Create the ApiResponse instance with the appropriate structure
-            var response = new ApiResponse<object>
+            // Standard RFC 7807 ProblemDetails + ApiResponse compatibility fields for the frontend
+            var problemDetails = new ProblemDetails
             {
-                Success = false,
-                Message = message,
-                Data = null,
-                Errors = null
+                Status = statusCode,
+                Title = title,
+                Detail = detailMessage,
+                Instance = context.Request.Path
             };
 
-            context.Response.ContentType = "application/json";
+            problemDetails.Extensions["success"] = false;
+            problemDetails.Extensions["message"] = detailMessage;
+            problemDetails.Extensions["data"] = null;
+            problemDetails.Extensions["errors"] = null;
+
+            context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = statusCode;
 
-            await context.Response.WriteAsJsonAsync(response);
+            await context.Response.WriteAsJsonAsync(problemDetails);
         }
     }
 }

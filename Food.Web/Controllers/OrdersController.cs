@@ -1,14 +1,20 @@
 using Food.Application.DTOs;
 using Food.Application.Interfaces;
+using Food.Domain.Models.Entities;
+using Food.Web.Repsonses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace Food.Web.Controllers
 {
+    /// <summary>
+    /// Handles order placement from cart, customer order history, and order state machine transitions.
+    /// </summary>
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -23,52 +29,47 @@ namespace Food.Web.Controllers
             return User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? throw new UnauthorizedAccessException("User is not authenticated.");
         }
-        // get all orders for admin users
+
+        /// <summary>
+        /// Retrieves all customer orders across the platform (Admin only).
+        /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<OrderDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetAllOrders()
         {
             var orders = await _orderService.GetAllOrdersAsync();
-
-            return Ok(new
-            {
-                Success = true,
-                Message = "Orders retrieved successfully",
-                Data = orders,
-                Errors = (Dictionary<string, string[]>?)null
-            });
+            return Ok(ApiResponse<IEnumerable<OrderDTO>>.OkResponse(orders, "Orders retrieved successfully"));
         }
 
-        // get orders for the currently authenticated user
+        /// <summary>
+        /// Retrieves the order history for the currently authenticated user.
+        /// </summary>
         [HttpGet("my")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<OrderDTO>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetUserOrders()
         {
             var orders = await _orderService.GetUserOrdersAsync(GetUserId());
-
-            return Ok(new
-            {
-                Success = true,
-                Message = "User orders retrieved successfully",
-                Data = orders,
-                Errors = (Dictionary<string, string[]>?)null
-            });
+            return Ok(ApiResponse<IEnumerable<OrderDTO>>.OkResponse(orders, "User orders retrieved successfully"));
         }
 
-        // get order by id for admin users
+        /// <summary>
+        /// Retrieves a specific order by ID (Accessible by the order owner or an Admin).
+        /// </summary>
+        /// <param name="id">The order ID.</param>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<OrderDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<OrderDTO>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetOrderById(int id)
         {
             var order = await _orderService.GetOrderByIdAsync(id);
-
             if (order == null)
             {
-                return NotFound(new
-                {
-                    Success = false,
-                    Message = "Order not found",
-                    Data = (object?)null,
-                    Errors = (Dictionary<string, string[]>?)null
-                });
+                return NotFound(ApiResponse<OrderDTO>.FailResponse("Order not found"));
             }
 
             var userId = GetUserId();
@@ -77,58 +78,65 @@ namespace Food.Web.Controllers
                 return Forbid();
             }
 
-            return Ok(new
-            {
-                Success = true,
-                Message = "Order retrieved successfully",
-                Data = order,
-                Errors = (Dictionary<string, string[]>?)null
-            });
+            return Ok(ApiResponse<OrderDTO>.OkResponse(order, "Order retrieved successfully"));
         }
 
-        // post new order for the currently authenticated user
+        /// <summary>
+        /// Places a new order from the current user's cart using server-computed database prices.
+        /// </summary>
+        /// <param name="request">Delivery address ID belonging to the user.</param>
         [HttpPost]
+        [ProducesResponseType(typeof(ApiResponse<OrderDTO>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequestDTO request)
         {
             var userId = GetUserId();
             var order = await _orderService.CreateOrderAsync(userId, request.AddressId);
 
-            var response = new
-            {
-                Success = true,
-                Message = "Order created successfully",
-                Data = order,
-                Errors = (Dictionary<string, string[]>?)null
-            };
-
-            return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, response);
+            return CreatedAtAction(
+                nameof(GetOrderById),
+                new { id = order.Id },
+                ApiResponse<OrderDTO>.OkResponse(order, "Order created successfully"));
         }
 
-        // update order status for admin users patch request
+        /// <summary>
+        /// Updates an order's state following strict state machine rules.
+        /// </summary>
+        /// <remarks>
+        /// Valid flow: Created (0) -&gt; Confirmed (1) -&gt; Preparing (2) -&gt; OnTheWay (3) -&gt; Delivered (4).
+        /// Cancelled (5) is allowed only from Created or Confirmed. Customers may cancel their own Created/Confirmed orders.
+        /// </remarks>
+        /// <param name="id">The order ID.</param>
+        /// <param name="request">Target OrderState enum value.</param>
         [HttpPatch("{id}/status")]
-        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequestDTO request)
         {
-            var success = await _orderService.UpdateOrderStatusAsync(id, request.Status);
+            var isAdmin = User.IsInRole("Admin");
 
-            if (!success)
+            // Non-admin customers may only cancel their own Created/Confirmed orders
+            if (!isAdmin)
             {
-                return NotFound(new
+                if (request.Status != OrderState.Cancelled)
                 {
-                    Success = false,
-                    Message = "Order not found",
-                    Data = (object?)null,
-                    Errors = (Dictionary<string, string[]>?)null
-                });
+                    return Forbid();
+                }
+
+                await _orderService.CancelOrderAsync(id, GetUserId(), isAdmin: false);
+                return Ok(ApiResponse<object>.OkResponse(null, "Order cancelled successfully"));
             }
 
-            return Ok(new
+            var success = await _orderService.UpdateOrderStatusAsync(id, request.Status);
+            if (!success)
             {
-                Success = true,
-                Message = "Order status updated successfully",
-                Data = (object?)null,
-                Errors = (Dictionary<string, string[]>?)null
-            });
+                return NotFound(ApiResponse<object>.FailResponse("Order not found"));
+            }
+
+            return Ok(ApiResponse<object>.OkResponse(null, "Order status updated successfully"));
         }
     }
 }

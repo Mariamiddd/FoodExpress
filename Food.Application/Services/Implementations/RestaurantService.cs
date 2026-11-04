@@ -19,16 +19,36 @@ namespace Food.Application.Services.Implementations
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<RestaurantDTO>> GetAllRestaurantsAsync()
+        public async Task<IEnumerable<RestaurantDTO>> GetAllRestaurantsAsync(
+            string? search = null,
+            int? categoryId = null,
+            int page = 1,
+            int pageSize = 50)
         {
-            var restaurants = await _restaurantRepository.GetAllAsync();
-            return _mapper.Map<IEnumerable<RestaurantDTO>>(restaurants);
+            var restaurants = string.IsNullOrWhiteSpace(search)
+                ? await _restaurantRepository.GetAllAsync()
+                : await _restaurantRepository.SearchAsync(search);
+
+            if (categoryId.HasValue && categoryId.Value > 0)
+            {
+                restaurants = restaurants.Where(r => r.MenuItems != null && r.MenuItems.Any(m => m.CategoryId == categoryId.Value));
+            }
+
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var paged = restaurants
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return _mapper.Map<IEnumerable<RestaurantDTO>>(paged);
         }
 
-        public async Task<RestaurantDTO> GetRestaurantByIdAsync(int id)
+        public async Task<RestaurantDTO?> GetRestaurantByIdAsync(int id)
         {
             var restaurant = await _restaurantRepository.GetByIdAsync(id);
-            return _mapper.Map<RestaurantDTO>(restaurant);
+            return restaurant == null ? null : _mapper.Map<RestaurantDTO>(restaurant);
         }
 
         public async Task<IEnumerable<RestaurantDTO>> SearchRestaurantsAsync(string searchTerm)

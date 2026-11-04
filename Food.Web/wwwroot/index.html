@@ -35,7 +35,7 @@
                 <h2>Create Account</h2>
                 <input type="text" id="reg-username" placeholder="Username" required>
                 <input type="email" id="reg-email" placeholder="Email" required>
-                <input type="password" id="reg-password" placeholder="Password" required>
+                <input type="password" id="reg-password" placeholder="Password (min 8 chars, 1 upper, 1 number, 1 symbol)" required>
                 <input type="password" id="reg-confirm" placeholder="Confirm Password" required>
                 <button type="submit" class="btn-primary">Register</button>
             </form>
@@ -45,16 +45,18 @@
     <!-- LOGIN BANNER (Shows when browsing but not logged in) -->
     <div id="login-banner" class="login-banner" style="display: none;">
         <p>Sign in to checkout and track your orders!</p>
-        <button onclick="toggleAuthModal()" class="btn-small">Login/Register</button>
+        <button onclick="toggleAuthModal()" class="btn-primary btn-small">Login / Register</button>
     </div>
 
     <!-- MAIN APP SECTION -->
     <div id="app-section" class="container">
         <nav class="navbar">
-            <h1 class="logo">FoodExpress</h1>
+            <h1 class="logo" onclick="showView('restaurants')" style="cursor: pointer;">FoodExpress</h1>
             <div class="nav-links">
                 <button onclick="showView('restaurants')">Restaurants</button>
-                <button id="cart-nav-btn" onclick="showView('cart')" style="display: none;">Cart</button>
+                <button id="cart-nav-btn" onclick="showView('cart')" style="display: none;">
+                    Cart <span id="cart-badge" class="badge">0</span>
+                </button>
                 <button id="orders-nav-btn" onclick="showView('orders')" style="display: none;">My Orders</button>
                 <button id="profile-nav-btn" onclick="showView('profile')" style="display: none;">Profile</button>
                 <button id="admin-nav-btn" onclick="showView('admin')" style="display: none;" class="btn-accent">Admin</button>
@@ -66,17 +68,26 @@
         <div class="content">
             <!-- RESTAURANTS VIEW -->
             <div id="view-restaurants" class="view">
-                <h2>Discover Restaurants & Menus</h2>
+                <div class="section-header">
+                    <h2>Discover Restaurants & Menus</h2>
+                    <button onclick="loadRestaurants()" class="btn-outline btn-small">Show All</button>
+                </div>
+
                 <div class="search-bar">
-                    <input type="text" id="search-rest" placeholder="Search restaurants...">
-                    <button onclick="searchRestaurants()" class="btn-secondary">Search</button>
-                    <input type="text" id="search-menu" placeholder="Search all menus...">
+                    <input type="text" id="search-rest" placeholder="Search restaurants by name or address...">
+                    <button onclick="searchRestaurants()" class="btn-secondary">Search Restaurants</button>
+                    <input type="text" id="search-menu" placeholder="Search all menu items...">
                     <button onclick="searchMenus()" class="btn-secondary">Search Menus</button>
                 </div>
+
+                <div id="category-filters" class="category-pills"></div>
+
                 <div id="restaurants-list" class="grid"></div>
 
-                <div id="menu-container" style="display: none; margin-top: 30px;">
-                    <h3 id="menu-title">Menu</h3>
+                <div id="menu-container" class="menu-section" style="display: none;">
+                    <div class="section-header">
+                        <h3 id="menu-title">Menu</h3>
+                    </div>
                     <div id="menu-list" class="grid"></div>
                 </div>
             </div>
@@ -86,37 +97,50 @@
                 <h2>Your Cart</h2>
                 <div id="cart-items"></div>
                 <div class="checkout-section card">
-                    <h3>Checkout</h3>
+                    <h3>Delivery & Checkout</h3>
+                    <label for="checkout-address" class="field-label">Select Delivery Address</label>
                     <select id="checkout-address"></select>
-                    <button onclick="checkout()" class="btn-primary">Place Order</button>
+                    <button id="checkout-btn" onclick="checkout()" class="btn-primary">Place Order</button>
                 </div>
             </div>
 
             <!-- ORDERS VIEW -->
             <div id="view-orders" class="view" style="display: none;">
-                <h2>My Orders</h2>
+                <div class="section-header">
+                    <h2>My Orders</h2>
+                    <button onclick="loadOrders()" class="btn-outline btn-small">Refresh</button>
+                </div>
                 <div id="my-orders-list" class="grid"></div>
             </div>
 
             <!-- PROFILE / ADDRESSES VIEW -->
             <div id="view-profile" class="view" style="display: none;">
                 <h2>My Profile</h2>
-                <div class="card">
-                    <h3>Profile Picture</h3>
-                    <div id="profile-image-container" style="margin-bottom: 15px;">
-                        <img id="profile-image-preview" src="" alt="Profile" style="max-width: 150px; max-height: 150px; border-radius: 50%; display: none;">
+                <div class="card profile-card">
+                    <div>
+                        <h3>Account Details</h3>
+                        <p id="profile-username" class="text-muted"></p>
+                        <p id="profile-email" class="text-muted"></p>
                     </div>
-                    <input type="file" id="profile-image-input" accept="image/*" style="margin-bottom: 10px;">
-                    <button onclick="uploadProfileImage()" class="btn-primary">Upload Profile Image</button>
+                    <div class="profile-upload-box">
+                        <div id="profile-image-container" class="avatar-wrapper">
+                            <img id="profile-image-preview" src="" alt="Profile" class="avatar-img" style="display: none;">
+                        </div>
+                        <input type="file" id="profile-image-input" accept="image/*">
+                        <button onclick="uploadProfileImage()" class="btn-primary">Upload Profile Image</button>
+                    </div>
                 </div>
 
-                <h2 style="margin-top: 30px;">My Addresses</h2>
+                <h2 class="section-spacer">My Addresses</h2>
                 <div class="card">
-                    <input type="text" id="addr-city" placeholder="City">
-                    <input type="text" id="addr-street" placeholder="Street">
+                    <h3>Add New Delivery Address</h3>
+                    <div class="form-row">
+                        <input type="text" id="addr-city" placeholder="City (e.g., Tbilisi)">
+                        <input type="text" id="addr-street" placeholder="Street Address (min 5 chars)">
+                    </div>
                     <button onclick="addAddress()" class="btn-secondary">Add Address</button>
                 </div>
-                <div id="addresses-list" class="grid" style="margin-top: 20px;"></div>
+                <div id="addresses-list" class="grid section-spacer-sm"></div>
             </div>
 
             <!-- ADMIN VIEW -->
@@ -126,15 +150,15 @@
                     <!-- Manage Restaurants -->
                     <div class="card">
                         <h3>Restaurants (CRUD)</h3>
-                        <input type="number" id="adm-rest-id" placeholder="ID (for Update/Delete)">
-                        <input type="text" id="adm-rest-name" placeholder="Name">
-                        <input type="text" id="adm-rest-address" placeholder="Address">
+                        <input type="number" id="adm-rest-id" placeholder="Restaurant ID (for Update/Delete)">
+                        <input type="text" id="adm-rest-name" placeholder="Restaurant Name">
+                        <input type="text" id="adm-rest-address" placeholder="Restaurant Address">
                         <div class="btn-group">
                             <button onclick="adminAddRestaurant()" class="btn-primary">Add</button>
                             <button onclick="adminUpdateRestaurant()" class="btn-secondary">Update</button>
                             <button onclick="adminDeleteRestaurant()" class="btn-accent">Delete</button>
                         </div>
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                        <div class="card-divider">
                             <h4>Upload Restaurant Image</h4>
                             <input type="number" id="adm-rest-img-id" placeholder="Restaurant ID">
                             <input type="file" id="adm-rest-image-input" accept="image/*">
@@ -145,18 +169,20 @@
                     <!-- Manage Menu Items -->
                     <div class="card">
                         <h3>Menu Items (CRUD)</h3>
-                        <input type="number" id="adm-menu-id" placeholder="Item ID (Update/Delete)">
+                        <input type="number" id="adm-menu-id" placeholder="Menu Item ID (for Update/Delete)">
                         <input type="number" id="adm-menu-restId" placeholder="Restaurant ID">
-                        <input type="number" id="adm-menu-catId" placeholder="Category ID">
+                        <input type="number" id="adm-menu-catId" placeholder="Category ID (see available list)">
                         <input type="text" id="adm-menu-name" placeholder="Item Name">
-                        <input type="number" id="adm-menu-price" placeholder="Price">
-                        <label><input type="checkbox" id="adm-menu-avail"> Available</label>
+                        <input type="number" step="0.01" id="adm-menu-price" placeholder="Price ($)">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="adm-menu-avail" checked> Available for Order
+                        </label>
                         <div class="btn-group">
                             <button onclick="adminAddMenuItem()" class="btn-primary">Add</button>
                             <button onclick="adminUpdateMenuItem()" class="btn-secondary">Update</button>
                             <button onclick="adminDeleteMenuItem()" class="btn-accent">Delete</button>
                         </div>
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                        <div class="card-divider">
                             <h4>Upload Menu Item Image</h4>
                             <input type="number" id="adm-menu-img-id" placeholder="Menu Item ID">
                             <input type="file" id="adm-menu-image-input" accept="image/*">
@@ -166,24 +192,38 @@
 
                     <!-- Manage Categories & Orders -->
                     <div class="card">
-                        <h3>Category</h3>
-                        <input type="text" id="adm-cat-name" placeholder="Category Name">
+                        <h3>Categories</h3>
+                        <div id="admin-categories-hint" class="category-hint"></div>
+                        <input type="text" id="adm-cat-name" placeholder="New Category Name">
                         <button onclick="adminAddCategory()" class="btn-primary">Add Category</button>
 
-                        <h3 style="margin-top: 20px;">Order Management</h3>
-                        <input type="number" id="adm-ord-id" placeholder="Order ID">
-                        <select id="adm-ord-status">
-                            <option value="1">1 - Confirmed</option>
-                            <option value="2">2 - Preparing</option>
-                            <option value="3">3 - OnTheWay</option>
-                            <option value="4">4 - Delivered</option>
-                            <option value="5">5 - Cancelled</option>
-                        </select>
-                        <button onclick="adminUpdateOrderStatus()" class="btn-secondary">Update Status</button>
-                        <button onclick="adminLoadAllOrders()" class="btn-outline" style="margin-top: 10px;">Load All Orders</button>
+                        <div class="card-divider">
+                            <h3>Order State Machine</h3>
+                            <p class="text-muted small-note">Valid flow: Created &rarr; Confirmed &rarr; Preparing &rarr; OnTheWay &rarr; Delivered</p>
+                            <input type="number" id="adm-ord-id" placeholder="Order ID">
+                            <select id="adm-ord-status">
+                                <option value="1">1 - Confirmed</option>
+                                <option value="2">2 - Preparing</option>
+                                <option value="3">3 - OnTheWay</option>
+                                <option value="4">4 - Delivered</option>
+                                <option value="5">5 - Cancelled</option>
+                            </select>
+                            <div class="btn-group">
+                                <button onclick="adminUpdateOrderStatus()" class="btn-secondary">Update Status</button>
+                                <button onclick="adminLoadAllOrders()" class="btn-outline">Refresh Orders</button>
+                            </div>
+                        </div>
+
+                        <div class="card-divider">
+                            <h3>Promote User to Admin</h3>
+                            <input type="email" id="adm-promote-email" placeholder="Registered User Email (e.g., john@gmail.com)">
+                            <button onclick="adminPromoteUser()" class="btn-primary">Grant Admin Role</button>
+                        </div>
                     </div>
                 </div>
-                <div id="admin-orders-list" style="margin-top: 20px;"></div>
+
+                <h3 class="section-spacer">All Customer Orders</h3>
+                <div id="admin-orders-list" class="grid section-spacer-sm"></div>
             </div>
         </div>
     </div>

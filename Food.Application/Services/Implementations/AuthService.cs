@@ -15,13 +15,12 @@ namespace Food.Application.Services.Implementations
 {
     public class AuthService : IAuthService
     {
-
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<AuthService> _logger;
 
-
-        public AuthService(IConfiguration configuration,
+        public AuthService(
+            IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
             ILogger<AuthService> logger)
         {
@@ -30,65 +29,53 @@ namespace Food.Application.Services.Implementations
             _logger = logger;
         }
 
-        public async Task<AuthResponseDTO> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
+        public async Task<AuthResponseDTO?> LoginUserAsync(LoginDTO dto, CancellationToken cancellationToken = default)
         {
-            try
+            _logger.LogInformation("Login attempt for email: {Email}", dto.Email);
+
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             {
-                _logger.LogInformation("Login attempt for email: {Email}", dto.Email);
-
-                var user = await _userManager.FindByEmailAsync(dto.Email);
-
-                if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
-                {
-                    _logger.LogWarning("Failed login attempt for email: {Email} - invalid credentials", dto.Email);
-                    return null; // Return null instead of throwing
-                }
-
-                var userRoles = await _userManager.GetRolesAsync(user);
-                var response = GenerateJwtToken(user, userRoles);
-
-                _logger.LogInformation("Successful login for user: {UserId} with roles: {Roles}", user.Id, string.Join(", ", userRoles));
-
-                return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during login for email: {Email}", dto.Email);
+                _logger.LogWarning("Failed login attempt for email: {Email} - invalid credentials", dto.Email);
                 return null;
             }
 
+            var response = await GenerateJwtTokenAsync(user);
+            _logger.LogInformation("Successful login for user: {UserId}", user.Id);
+            return response;
         }
 
-        private AuthResponseDTO GenerateJwtToken(ApplicationUser user, IList<string> roles)
+        public async Task<AuthResponseDTO> GenerateJwtTokenAsync(ApplicationUser user)
         {
-            var jwtKey = _configuration["Jwt:Key"];
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var jwtKey = _configuration["Jwt:Key"]
+                ?? throw new InvalidOperationException("JWT Key is not configured.");
             var issuer = _configuration["Jwt:Issuer"];
             var audience = _configuration["Jwt:Audience"];
-            var expireMinutes = int.Parse(_configuration["Jwt:ExpirationInMinutes"]);
+            var expireMinutes = int.TryParse(_configuration["Jwt:ExpirationInMinutes"], out var mins) ? mins : 120;
             var expiresAt = DateTime.UtcNow.AddMinutes(expireMinutes);
 
             var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.UserName)
-        };
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.UserName ?? user.Email ?? string.Empty)
+            };
 
-            // Injecting roles into the claims - add both long form (ClaimTypes.Role) and short form ("role")
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
-                claims.Add(new Claim("role", role));  // Add short form for frontend compatibility
+                claims.Add(new Claim("role", role));
             }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                issuer,
-                audience,
-                claims,
+                issuer: issuer,
+                audience: audience,
+                claims: claims,
                 expires: expiresAt,
                 signingCredentials: credentials
             );
@@ -98,12 +85,10 @@ namespace Food.Application.Services.Implementations
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 ExpiresAt = expiresAt,
                 UserId = user.Id,
-                Email = user.Email,
-                UserName = user.UserName,
-                Roles = roles  // Include roles in response
+                Email = user.Email ?? string.Empty,
+                UserName = user.UserName ?? string.Empty,
+                Roles = roles
             };
         }
-
-
     }
 }

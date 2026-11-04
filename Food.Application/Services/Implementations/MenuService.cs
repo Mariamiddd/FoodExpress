@@ -22,9 +22,8 @@ namespace Food.Application.Services.Implementations
 
         public async Task<IEnumerable<MenuItemDTO>> GetMenuByRestaurantAsync(int restaurantId)
         {
-            var menuItems = await _menuRepository.GetAllAsync();
-            var filtered = menuItems.Where(m => m.RestaurantId == restaurantId).ToList();
-            return _mapper.Map<IEnumerable<MenuItemDTO>>(filtered);
+            var menuItems = await _menuRepository.GetByRestaurantIdAsync(restaurantId);
+            return _mapper.Map<IEnumerable<MenuItemDTO>>(menuItems);
         }
 
         public async Task<MenuItemDTO> GetMenuItemByIdAsync(int id)
@@ -35,26 +34,13 @@ namespace Food.Application.Services.Implementations
 
         public async Task<IEnumerable<MenuItemDTO>> GetMenuByCategoryAsync(int categoryId)
         {
-            var menuItems = await _menuRepository.GetAllAsync();
-            var filtered = menuItems.Where(m => m.CategoryId == categoryId).ToList();
-            return _mapper.Map<IEnumerable<MenuItemDTO>>(filtered);
+            var menuItems = await _menuRepository.GetByCategoryIdAsync(categoryId);
+            return _mapper.Map<IEnumerable<MenuItemDTO>>(menuItems);
         }
 
         public async Task<IEnumerable<MenuItemDTO>> SearchMenuItemsAsync(string searchTerm, int? restaurantId = null)
         {
-            var menuItems = await _menuRepository.GetAllAsync();
-
-            if (!string.IsNullOrWhiteSpace(searchTerm))
-            {
-                searchTerm = searchTerm.ToLower();
-                menuItems = menuItems.Where(m => m.Name.ToLower().Contains(searchTerm)).ToList();
-            }
-
-            if (restaurantId.HasValue)
-            {
-                menuItems = menuItems.Where(m => m.RestaurantId == restaurantId.Value).ToList();
-            }
-
+            var menuItems = await _menuRepository.SearchAsync(searchTerm, restaurantId);
             return _mapper.Map<IEnumerable<MenuItemDTO>>(menuItems);
         }
     }

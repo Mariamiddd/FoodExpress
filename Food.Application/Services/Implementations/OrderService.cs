@@ -28,11 +28,11 @@ namespace Food.Application.Services.Implementations
             return _mapper.Map<IEnumerable<OrderDTO>>(orders);
         }
 
-        public async Task<OrderDTO> GetOrderByIdAsync(int orderId)
+        public async Task<OrderDTO?> GetOrderByIdAsync(int orderId)
         {
             _logger.LogInformation("Retrieving order with ID: {OrderId}", orderId);
             var order = await _unitOfWork.Orders.GetOrderByIdAsync(orderId);
-            return _mapper.Map<OrderDTO>(order);
+            return order == null ? null : _mapper.Map<OrderDTO>(order);
         }
 
         public async Task<IEnumerable<OrderDTO>> GetUserOrdersAsync(string userId)
@@ -47,22 +47,27 @@ namespace Food.Application.Services.Implementations
             _logger.LogInformation("Creating order for user: {UserId} with address: {AddressId}", userId, addressId);
 
             var addresses = await _unitOfWork.Addresses.GetAddressesByUserIdAsync(userId);
+            var selectedAddress = addresses.FirstOrDefault(a => a.Id == addressId);
 
-            if (!addresses.Any(a => a.Id == addressId))
+            if (selectedAddress == null)
             {
                 _logger.LogWarning("Address {AddressId} does not belong to user {UserId}", addressId, userId);
                 throw new UnauthorizedAccessException(ErrorMessages.InvalidAddressError);
             }
 
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
-
             if (cart == null || !cart.CartItems.Any())
             {
                 _logger.LogWarning("Cart is empty for user: {UserId}", userId);
                 throw new InvalidOperationException(ErrorMessages.EmptyCartError);
             }
 
-            // validation all items in the cart belong to the same restaurant
+            // Ensure all items in cart are still available and belong to the same restaurant
+            if (cart.CartItems.Any(ci => ci.MenuItem == null || !ci.MenuItem.IsAvailable))
+            {
+                throw new InvalidOperationException("One or more items in your cart are no longer available.");
+            }
+
             var restaurantIds = cart.CartItems.Select(ci => ci.MenuItem.RestaurantId).Distinct().ToList();
             if (restaurantIds.Count > 1)
             {
@@ -82,7 +87,7 @@ namespace Food.Application.Services.Implementations
             decimal total = 0;
             foreach (var cartItem in cart.CartItems)
             {
-                // UnitPrice is set to the current price of the MenuItem at the time of order creation
+                // Server-side pricing computation using current database price
                 var unitPrice = cartItem.MenuItem.Price;
                 var orderItem = new OrderItem
                 {
@@ -93,7 +98,7 @@ namespace Food.Application.Services.Implementations
                     Name = cartItem.MenuItem.Name
                 };
                 order.OrderItems.Add(orderItem);
-                total += (unitPrice * cartItem.Quantity);
+                total += unitPrice * cartItem.Quantity;
             }
 
             order.TotalPrice = total;
@@ -104,7 +109,8 @@ namespace Food.Application.Services.Implementations
 
             _logger.LogInformation("Order created successfully with ID: {OrderId} for user: {UserId}", order.Id, userId);
 
-            return _mapper.Map<OrderDTO>(order);
+            var savedOrder = await _unitOfWork.Orders.GetOrderByIdAsync(order.Id) ?? order;
+            return _mapper.Map<OrderDTO>(savedOrder);
         }
 
         public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderState newStatus)
@@ -136,11 +142,29 @@ namespace Food.Application.Services.Implementations
                     throw new InvalidOperationException($"State transition to {newStatus} is not supported.");
             }
 
-            _unitOfWork.Orders.UpdateAsync(order);
+            await _unitOfWork.Orders.UpdateAsync(order);
             await _unitOfWork.SaveAsync();
 
             _logger.LogInformation("Order {OrderId} status updated to {NewStatus}", orderId, newStatus);
+            return true;
+        }
 
+        public async Task<bool> CancelOrderAsync(int orderId, string userId, bool isAdmin)
+        {
+            var order = await _unitOfWork.Orders.GetOrderByIdAsync(orderId)
+                ?? throw new KeyNotFoundException(ErrorMessages.OrderNotFound);
+
+            if (!isAdmin && order.UserId != userId)
+            {
+                throw new UnauthorizedAccessException(ErrorMessages.OwnershipRequired);
+            }
+
+            order.Cancel();
+
+            await _unitOfWork.Orders.UpdateAsync(order);
+            await _unitOfWork.SaveAsync();
+
+            _logger.LogInformation("Order {OrderId} cancelled by user {UserId}", orderId, userId);
             return true;
         }
     }

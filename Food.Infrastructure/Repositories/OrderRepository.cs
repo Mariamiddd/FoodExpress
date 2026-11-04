@@ -17,28 +17,38 @@ namespace Food.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Order> GetOrderByIdAsync(int orderId)
+        public async Task<Order?> GetOrderByIdAsync(int orderId)
         {
             return await _context.Orders
+                .Include(o => o.Restaurant)
+                .Include(o => o.Address)
                 .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.MenuItem)
+                    .ThenInclude(oi => oi.MenuItem)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
         }
 
         public async Task<IEnumerable<Order>> GetAllAsync()
         {
             return await _context.Orders
+                .AsNoTracking()
+                .Include(o => o.Restaurant)
+                .Include(o => o.Address)
                 .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.MenuItem)
+                    .ThenInclude(oi => oi.MenuItem)
+                .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId)
         {
             return await _context.Orders
+                .AsNoTracking()
+                .Include(o => o.Restaurant)
+                .Include(o => o.Address)
                 .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.MenuItem)
+                    .ThenInclude(oi => oi.MenuItem)
                 .Where(o => o.UserId == userId)
+                .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
 
@@ -47,10 +57,10 @@ namespace Food.Infrastructure.Repositories
             await _context.Orders.AddAsync(order);
         }
 
-        public async Task UpdateAsync(Order order)
+        public Task UpdateAsync(Order order)
         {
             _context.Orders.Update(order);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

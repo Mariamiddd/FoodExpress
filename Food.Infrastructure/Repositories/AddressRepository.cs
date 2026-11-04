@@ -22,16 +22,29 @@ namespace Food.Infrastructure.Repositories
             await _context.Addresses.AddAsync(address);
         }
 
+        public async Task<Address?> GetByIdAsync(int id)
+        {
+            return await _context.Addresses.FirstOrDefaultAsync(a => a.Id == id);
+        }
+
         public async Task<IEnumerable<Address>> GetAllAsync()
         {
-            return await _context.Addresses.ToListAsync();
+            return await _context.Addresses
+                .AsNoTracking()
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<Address>> GetAddressesByUserIdAsync(string userId)
         {
             return await _context.Addresses
+                .AsNoTracking()
                 .Where(a => a.UserId == userId)
                 .ToListAsync();
+        }
+
+        public async Task<bool> IsUsedInOrdersAsync(int addressId)
+        {
+            return await _context.Orders.AnyAsync(o => o.AddressId == addressId);
         }
 
         public void Delete(Address address)

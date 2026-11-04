@@ -7,6 +7,8 @@ namespace Food.Application.Interfaces
 {
     public interface IUsersService
     {
-        Task RegisterUserAsync(RegisterDTO dto, CancellationToken cancellationToken = default);
+        Task<AuthResponseDTO> RegisterUserAsync(RegisterDTO dto, CancellationToken cancellationToken = default);
+        Task<object> GetUserProfileAsync(string userId);
+        Task<string?> UpdateProfileImageAsync(string userId, string newRelativePath);
     }
 }

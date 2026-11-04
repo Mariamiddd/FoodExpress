@@ -9,9 +9,10 @@ namespace Food.Application.Interfaces
     public interface IOrderService
     {
         Task<IEnumerable<OrderDTO>> GetAllOrdersAsync();
-        Task<OrderDTO> GetOrderByIdAsync(int orderId);
+        Task<OrderDTO?> GetOrderByIdAsync(int orderId);
         Task<IEnumerable<OrderDTO>> GetUserOrdersAsync(string userId);
         Task<OrderDTO> CreateOrderAsync(string userId, int addressId);
         Task<bool> UpdateOrderStatusAsync(int orderId, OrderState newStatus);
+        Task<bool> CancelOrderAsync(int orderId, string userId, bool isAdmin);
     }
 }

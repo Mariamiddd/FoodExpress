@@ -21,31 +21,37 @@ namespace Food.Infrastructure.Repositories
         public async Task<IEnumerable<Restaurant>> GetAllAsync()
         {
             return await _context.Restaurants
+                .AsNoTracking()
                 .Include(r => r.MenuItems)
-                .ThenInclude(m => m.Category)
+                    .ThenInclude(m => m.Category)
                 .ToListAsync();
         }
 
-        public async Task<Restaurant> GetByIdAsync(int id)
+        public async Task<Restaurant?> GetByIdAsync(int id)
         {
             return await _context.Restaurants
                 .Include(r => r.MenuItems)
-                .ThenInclude(m => m.Category)
+                    .ThenInclude(m => m.Category)
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
 
         public async Task<IEnumerable<Restaurant>> SearchAsync(string searchTerm)
         {
-            if (string.IsNullOrWhiteSpace(searchTerm))
-                return await GetAllAsync();
-
-            searchTerm = searchTerm.ToLower();
-            return await _context.Restaurants
+            var query = _context.Restaurants
+                .AsNoTracking()
                 .Include(r => r.MenuItems)
-                .ThenInclude(m => m.Category)
-                .Where(r => r.Name.ToLower().Contains(searchTerm) || 
-                           r.Address.ToLower().Contains(searchTerm))
-                .ToListAsync();
+                    .ThenInclude(m => m.Category)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var normalized = searchTerm.Trim().ToLower();
+                query = query.Where(r =>
+                    r.Name.ToLower().Contains(normalized) ||
+                    r.Address.ToLower().Contains(normalized));
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task AddAsync(Restaurant restaurant)
@@ -61,7 +67,7 @@ namespace Food.Infrastructure.Repositories
 
         public async Task DeleteAsync(int id)
         {
-            var restaurant = await GetByIdAsync(id);
+            var restaurant = await _context.Restaurants.FindAsync(id);
             if (restaurant != null)
             {
                 _context.Restaurants.Remove(restaurant);
