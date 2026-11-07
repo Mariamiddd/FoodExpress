@@ -40,6 +40,7 @@ namespace Food.Application.Profiles
 
             CreateMap<MenuItem, MenuItemDTO>()
                 .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant != null ? src.Restaurant.Name : string.Empty))
+                .ForMember(dest => dest.RestaurantIsActive, opt => opt.MapFrom(src => src.Restaurant == null || src.Restaurant.IsActive))
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : string.Empty));
 
             CreateMap<Restaurant, RestaurantDTO>()

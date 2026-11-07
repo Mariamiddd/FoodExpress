@@ -26,6 +26,7 @@ namespace Food.Application.Constants
 
         // Restaurant errors
         public const string RestaurantNotFound = "Restaurant not found.";
+        public const string RestaurantClosed = "This restaurant is currently closed and not accepting orders.";
         public const string RestaurantAlreadyExists = "A restaurant with this name already exists.";
         public const string InvalidRestaurantId = "Restaurant ID must be greater than 0.";
 

@@ -7,7 +7,7 @@ namespace Food.Domain.Interfaces
 {
     public interface IOrderRepository
     {
-        Task<Order> GetOrderByIdAsync(int orderId);
+        Task<Order?> GetOrderByIdAsync(int orderId);
         Task<IEnumerable<Order>> GetAllAsync();
         Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId);
         Task AddAsync(Order order);

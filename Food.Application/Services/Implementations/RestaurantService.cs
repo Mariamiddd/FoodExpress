@@ -4,7 +4,8 @@ using Food.Application.Services.Interfaces;
 using Food.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Food.Application.Services.Implementations
 {
@@ -31,7 +32,9 @@ namespace Food.Application.Services.Implementations
 
             if (categoryId.HasValue && categoryId.Value > 0)
             {
-                restaurants = restaurants.Where(r => r.MenuItems != null && r.MenuItems.Any(m => m.CategoryId == categoryId.Value));
+                restaurants = restaurants.Where(r =>
+                    r.MenuItems != null &&
+                    r.MenuItems.Any(m => m.CategoryId == categoryId.Value));
             }
 
             page = Math.Max(1, page);
@@ -41,6 +44,7 @@ namespace Food.Application.Services.Implementations
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
+
 
             return _mapper.Map<IEnumerable<RestaurantDTO>>(paged);
         }

@@ -116,33 +116,6 @@ namespace Food.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Categories");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Appetizers"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Main Courses"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "Desserts"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "Beverages"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "Salads"
-                        });
                 });
 
             modelBuilder.Entity("Food.Domain.Models.Entities.MenuItem", b =>
@@ -179,116 +152,6 @@ namespace Food.Infrastructure.Migrations
                     b.HasIndex("RestaurantId");
 
                     b.ToTable("MenuItems");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CategoryId = 1,
-                            IsAvailable = true,
-                            Name = "Garlic Bread",
-                            Price = 5.99m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CategoryId = 2,
-                            IsAvailable = true,
-                            Name = "Margherita Pizza",
-                            Price = 12.99m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CategoryId = 2,
-                            IsAvailable = true,
-                            Name = "Pepperoni Pizza",
-                            Price = 14.99m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CategoryId = 3,
-                            IsAvailable = true,
-                            Name = "Tiramisu",
-                            Price = 6.99m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 5,
-                            CategoryId = 1,
-                            IsAvailable = true,
-                            Name = "French Fries",
-                            Price = 4.99m,
-                            RestaurantId = 2
-                        },
-                        new
-                        {
-                            Id = 6,
-                            CategoryId = 2,
-                            IsAvailable = true,
-                            Name = "Classic Burger",
-                            Price = 10.99m,
-                            RestaurantId = 2
-                        },
-                        new
-                        {
-                            Id = 7,
-                            CategoryId = 2,
-                            IsAvailable = true,
-                            Name = "Double Cheeseburger",
-                            Price = 13.99m,
-                            RestaurantId = 2
-                        },
-                        new
-                        {
-                            Id = 8,
-                            CategoryId = 4,
-                            IsAvailable = true,
-                            Name = "Coca Cola",
-                            Price = 2.99m,
-                            RestaurantId = 2
-                        },
-                        new
-                        {
-                            Id = 9,
-                            CategoryId = 1,
-                            IsAvailable = true,
-                            Name = "Edamame",
-                            Price = 6.99m,
-                            RestaurantId = 3
-                        },
-                        new
-                        {
-                            Id = 10,
-                            CategoryId = 2,
-                            IsAvailable = true,
-                            Name = "California Roll",
-                            Price = 11.99m,
-                            RestaurantId = 3
-                        },
-                        new
-                        {
-                            Id = 11,
-                            CategoryId = 2,
-                            IsAvailable = true,
-                            Name = "Spicy Tuna Roll",
-                            Price = 13.99m,
-                            RestaurantId = 3
-                        },
-                        new
-                        {
-                            Id = 12,
-                            CategoryId = 5,
-                            IsAvailable = true,
-                            Name = "Seaweed Salad",
-                            Price = 8.99m,
-                            RestaurantId = 3
-                        });
                 });
 
             modelBuilder.Entity("Food.Domain.Models.Entities.Order", b =>
@@ -380,6 +243,11 @@ namespace Food.Infrastructure.Migrations
                     b.Property<string>("ImagePath")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -387,26 +255,6 @@ namespace Food.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Restaurants");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Address = "123 Main St",
-                            Name = "Pizza Palace"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Address = "456 Oak Ave",
-                            Name = "Burger Heaven"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Address = "789 River Rd",
-                            Name = "Sushi Paradise"
-                        });
                 });
 
             modelBuilder.Entity("Food.Domain.Models.Identity.ApplicationUser", b =>

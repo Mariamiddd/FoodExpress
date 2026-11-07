@@ -26,10 +26,10 @@ namespace Food.Application.Services.Implementations
             return _mapper.Map<IEnumerable<MenuItemDTO>>(menuItems);
         }
 
-        public async Task<MenuItemDTO> GetMenuItemByIdAsync(int id)
+        public async Task<MenuItemDTO?> GetMenuItemByIdAsync(int id)
         {
             var menuItem = await _menuRepository.GetByIdAsync(id);
-            return _mapper.Map<MenuItemDTO>(menuItem);
+            return menuItem == null ? null : _mapper.Map<MenuItemDTO>(menuItem);
         }
 
         public async Task<IEnumerable<MenuItemDTO>> GetMenuByCategoryAsync(int categoryId)

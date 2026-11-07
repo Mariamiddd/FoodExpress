@@ -69,6 +69,7 @@ namespace Food.Application.Services.Implementations
 
             var menuItem = await _unitOfWork.Menu.GetByIdAsync(dto.MenuItemId);
             BusinessRulesValidator.ValidateMenuItemAvailability(menuItem);
+            await EnsureRestaurantAcceptingOrdersAsync(menuItem!);
 
             var cart = await GetOrCreateCartEntityAsync(userId);
             BusinessRulesValidator.ValidateSingleRestaurantRule(cart, menuItem!.RestaurantId);
@@ -83,10 +84,30 @@ namespace Food.Application.Services.Implementations
 
             BusinessRulesValidator.ValidateQuantity(quantity);
 
+            var menuItem = await _unitOfWork.Menu.GetByIdAsync(menuItemId);
+            if (menuItem != null)
+            {
+                await EnsureRestaurantAcceptingOrdersAsync(menuItem);
+            }
+
             var cart = await GetOrCreateCartEntityAsync(userId);
             cart.UpdateItemQuantity(menuItemId, quantity);
 
             await _unitOfWork.SaveAsync();
+        }
+
+        private async Task EnsureRestaurantAcceptingOrdersAsync(MenuItem menuItem)
+        {
+            var restaurant = menuItem.Restaurant;
+            if (restaurant == null && _unitOfWork.Restaurants != null)
+            {
+                restaurant = await _unitOfWork.Restaurants.GetByIdAsync(menuItem.RestaurantId);
+            }
+
+            if (restaurant != null && !restaurant.IsActive)
+            {
+                throw new InvalidOperationException(ErrorMessages.RestaurantClosed);
+            }
         }
 
         public async Task RemoveFromCartAsync(string userId, int menuItemId)

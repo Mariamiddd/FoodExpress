@@ -11,6 +11,7 @@ namespace Food.Application.DTOs
         public string ImagePath { get; set; }
         public int RestaurantId { get; set; }
         public string RestaurantName { get; set; }
+        public bool RestaurantIsActive { get; set; } = true;
         public int CategoryId { get; set; }
         public string CategoryName { get; set; }
     }

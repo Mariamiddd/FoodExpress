@@ -11,6 +11,8 @@ namespace Food.Domain.Models.Entities
         public string Address { get; set; }
         public string? ImagePath { get; set; }
 
+        public bool IsActive { get; set; } = true;
+
         public ICollection<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
         public ICollection<Order> Orders { get; set; } = new List<Order>();
     }

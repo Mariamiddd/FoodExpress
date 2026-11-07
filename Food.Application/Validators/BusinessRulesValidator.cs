@@ -7,10 +7,9 @@ using Food.Application.DTOs;
 using System.Linq;
 
 namespace Food.Application.Validators
-{
-    /// <summary>
-    /// Centralized business rule validators for Cart, Order, and Menu operations.
-    /// </summary>
+{/// <summary>
+ /// Centralized business rule validators for Cart, Order, and Menu operations.
+ /// </summary>
     public static class BusinessRulesValidator
     {
         public static void ValidateQuantity(int quantity)
@@ -31,7 +30,7 @@ namespace Food.Application.Validators
 
         public static void ValidateSingleRestaurantRule(Cart cart, int newMenuItemRestaurantId)
         {
-            if (cart.CartItems == null || !cart.CartItems.Any())
+            if (cart.CartItems == null || cart.CartItems.Count == 0)
                 return;
 
             var existingRestaurantId = cart.CartItems
@@ -47,7 +46,7 @@ namespace Food.Application.Validators
 
         public static void ValidateCartForCheckout(Cart? cart)
         {
-            if (cart == null || cart.CartItems == null || !cart.CartItems.Any())
+            if (cart == null || cart.CartItems == null || cart.CartItems.Count == 0)
             {
                 throw new InvalidOperationException(ErrorMessages.EmptyCartError);
             }

@@ -2,9 +2,14 @@ using AutoMapper;
 using Food.Application.Constants;
 using Food.Application.DTOs;
 using Food.Application.Interfaces;
+using Food.Application.Validators;
 using Food.Domain.Interfaces;
 using Food.Domain.Models.Entities;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Food.Application.Services.Implementations
 {
@@ -47,44 +52,33 @@ namespace Food.Application.Services.Implementations
             _logger.LogInformation("Creating order for user: {UserId} with address: {AddressId}", userId, addressId);
 
             var addresses = await _unitOfWork.Addresses.GetAddressesByUserIdAsync(userId);
-            var selectedAddress = addresses.FirstOrDefault(a => a.Id == addressId);
-
-            if (selectedAddress == null)
-            {
-                _logger.LogWarning("Address {AddressId} does not belong to user {UserId}", addressId, userId);
-                throw new UnauthorizedAccessException(ErrorMessages.InvalidAddressError);
-            }
+            BusinessRulesValidator.ValidateUserAddressOwnership(addresses, addressId);
 
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
-            if (cart == null || !cart.CartItems.Any())
+            BusinessRulesValidator.ValidateCartForCheckout(cart);
+
+            var restaurantId = cart!.CartItems.First().MenuItem.RestaurantId;
+            var restaurant = cart.CartItems.First().MenuItem.Restaurant;
+            if (restaurant == null && _unitOfWork.Restaurants != null)
             {
-                _logger.LogWarning("Cart is empty for user: {UserId}", userId);
-                throw new InvalidOperationException(ErrorMessages.EmptyCartError);
+                restaurant = await _unitOfWork.Restaurants.GetByIdAsync(restaurantId);
             }
 
-            // Ensure all items in cart are still available and belong to the same restaurant
-            if (cart.CartItems.Any(ci => ci.MenuItem == null || !ci.MenuItem.IsAvailable))
+            if (restaurant != null && !restaurant.IsActive)
             {
-                throw new InvalidOperationException("One or more items in your cart are no longer available.");
-            }
-
-            var restaurantIds = cart.CartItems.Select(ci => ci.MenuItem.RestaurantId).Distinct().ToList();
-            if (restaurantIds.Count > 1)
-            {
-                _logger.LogWarning("User {UserId} attempted to order from multiple restaurants", userId);
-                throw new InvalidOperationException(ErrorMessages.MixedRestaurantError);
+                throw new InvalidOperationException(ErrorMessages.RestaurantClosed);
             }
 
             var order = new Order
             {
                 UserId = userId,
                 AddressId = addressId,
-                RestaurantId = restaurantIds.First(),
+                RestaurantId = restaurantId,
                 CreatedAt = DateTime.UtcNow,
                 Status = OrderState.Created
             };
 
-            decimal total = 0;
+            decimal total = 0m;
             foreach (var cartItem in cart.CartItems)
             {
                 // Server-side pricing computation using current database price

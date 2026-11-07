@@ -5,7 +5,6 @@ using Food.Application.Services.Interfaces;
 using Food.Domain.Interfaces;
 using Food.Domain.Models.Entities;
 using Food.Domain.Models.Identity;
-using Food.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System;
@@ -53,6 +52,7 @@ namespace Food.Application.Services.Implementations
 
             restaurant.Name = dto.Name.Trim();
             restaurant.Address = dto.Address.Trim();
+            restaurant.IsActive = dto.IsActive;
             if (!string.IsNullOrWhiteSpace(dto.ImagePath))
             {
                 restaurant.ImagePath = dto.ImagePath;

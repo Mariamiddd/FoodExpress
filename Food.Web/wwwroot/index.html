@@ -1,233 +1,1172 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FoodExpress</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts: Fraunces (Editorial Display) & Plus Jakarta Sans (Tactile Consumer UI) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div id="toast"></div>
 
-    <!-- FLOATING LOGIN BUTTON -->
-    <button id="floating-auth-btn" class="floating-btn" onclick="toggleAuthModal()">
-        <span id="auth-btn-text">Login/Register</span>
-    </button>
+    <!-- =====================================================================
+         STICKY TOP NAVIGATION BAR (Bolt Food / Glovo Inspired)
+         ===================================================================== -->
+    <header class="topbar" id="topbar">
+        <div class="topbar-inner container">
+            <!-- Brand Identity -->
+            <div class="brand-cluster">
+                <a href="#home" class="brand-logo" id="brandHomeLink" aria-label="FoodExpress Home">
+                    <span class="brand-emblem">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 2C7.5 2 4 5.5 4 10c0 5.25 8 12 8 12s8-6.75 8-12c0-4.5-3.5-8-8-8z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                    </span>
+                    <span class="brand-text">Food<strong>Express</strong></span>
+                </a>
 
-    <!-- AUTH MODAL -->
-    <div id="auth-modal" class="auth-modal" style="display: none;">
-        <div class="auth-modal-content">
-            <button class="close-btn" onclick="closeAuthModal()">&times;</button>
-
-            <div class="auth-modal-tabs">
-                <button class="tab active" onclick="toggleAuthTab('login')">Login</button>
-                <button class="tab" onclick="toggleAuthTab('register')">Register</button>
+                <!-- Address Selector Pill (Visible when authenticated) -->
+                <div class="address-pill-wrap hidden" id="topAddressPillWrap">
+                    <span class="address-pill-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        Deliver to:
+                    </span>
+                    <select id="topAddressSelect" class="address-pill-select" aria-label="Select Delivery Address">
+                        <option value="">Add an address...</option>
+                    </select>
+                    <button type="button" class="btn-icon-tiny" id="topManageAddressBtn" title="Manage delivery addresses">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
-            <form id="login-form-modal" onsubmit="handleLogin(event)">
-                <h2>Login to FoodExpress</h2>
-                <input type="email" id="login-email" placeholder="Email" required>
-                <input type="password" id="login-password" placeholder="Password" required>
-                <button type="submit" class="btn-primary">Login</button>
-            </form>
+            <!-- Dual Search Cluster: Global Dish Search + Instant Restaurant Finder -->
+            <div class="topbar-search-cluster">
+                <!-- Global Dish Search (GET /api/Menu/search?q=...) -->
+                <form class="global-search-form" id="globalDishSearchForm" role="search">
+                    <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input type="search"
+                           id="globalDishSearchInput"
+                           class="global-search-input"
+                           placeholder="Search dishes across all kitchens..."
+                           autocomplete="off" />
+                    <button type="submit" class="search-submit-pill">Find Dish</button>
+                </form>
 
-            <form id="register-form-modal" style="display: none;" onsubmit="handleRegister(event)">
-                <h2>Create Account</h2>
-                <input type="text" id="reg-username" placeholder="Username" required>
-                <input type="email" id="reg-email" placeholder="Email" required>
-                <input type="password" id="reg-password" placeholder="Password (min 8 chars, 1 upper, 1 number, 1 symbol)" required>
-                <input type="password" id="reg-confirm" placeholder="Confirm Password" required>
-                <button type="submit" class="btn-primary">Register</button>
-            </form>
-        </div>
-    </div>
+                <!-- Dedicated Quick Restaurant Finder (GET /api/Restaurants/search?q=...) -->
+                <div class="quick-finder-wrap" id="quickFinderWrap">
+                    <button type="button" class="btn-quick-finder" id="toggleQuickFinderBtn" aria-expanded="false">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                        </svg>
+                        <span>Quick Finder</span>
+                    </button>
 
-    <!-- LOGIN BANNER (Shows when browsing but not logged in) -->
-    <div id="login-banner" class="login-banner" style="display: none;">
-        <p>Sign in to checkout and track your orders!</p>
-        <button onclick="toggleAuthModal()" class="btn-primary btn-small">Login / Register</button>
-    </div>
+                    <!-- Instant Restaurant Search Popover -->
+                    <div class="quick-finder-popover hidden" id="quickFinderPopover">
+                        <div class="quick-finder-header">
+                            <span class="quick-finder-title">Find a restaurant</span>
+                            <span class="quick-finder-sub">Search by name or street</span>
+                        </div>
+                        <div class="quick-finder-input-row">
+                            <input type="search"
+                                   id="quickRestaurantSearchInput"
+                                   placeholder="e.g., Osteria, Baker St, Rustaveli..."
+                                   autocomplete="off" />
+                            <button type="button" class="btn-secondary btn-sm" id="quickRestaurantSearchBtn">Search</button>
+                        </div>
+                        <div class="quick-finder-results" id="quickRestaurantResults">
+                            <p class="muted-helper">Type a restaurant name or street address above.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <!-- MAIN APP SECTION -->
-    <div id="app-section" class="container">
-        <nav class="navbar">
-            <h1 class="logo" onclick="showView('restaurants')" style="cursor: pointer;">FoodExpress</h1>
-            <div class="nav-links">
-                <button onclick="showView('restaurants')">Restaurants</button>
-                <button id="cart-nav-btn" onclick="showView('cart')" style="display: none;">
-                    Cart <span id="cart-badge" class="badge">0</span>
+            <!-- User Actions, Orders, Admin Switch & Sliding Cart Trigger -->
+            <div class="topbar-actions">
+                <!-- Navigation Pills -->
+                <button type="button" class="nav-pill active" id="navHomeBtn">
+                    Discover
                 </button>
-                <button id="orders-nav-btn" onclick="showView('orders')" style="display: none;">My Orders</button>
-                <button id="profile-nav-btn" onclick="showView('profile')" style="display: none;">Profile</button>
-                <button id="admin-nav-btn" onclick="showView('admin')" style="display: none;" class="btn-accent">Admin</button>
-                <button id="logout-nav-btn" onclick="logout()" style="display: none;" class="btn-outline">Logout</button>
-                <button id="login-nav-btn" onclick="toggleAuthModal()" class="btn-primary">Login/Register</button>
+
+                <button type="button" class="nav-pill hidden" id="navMyOrdersBtn">
+                    My Orders
+                </button>
+
+                <!-- Admin Control Center Button (Only shown when roles include "Admin") -->
+                <button type="button" class="nav-pill nav-pill-admin hidden" id="navAdminBtn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                        <rect x="14" y="14" width="7" height="7" />
+                        <rect x="3" y="14" width="7" height="7" />
+                    </svg>
+                    Admin Center
+                </button>
+
+                <!-- Auth / Profile Trigger -->
+                <button type="button" class="btn-auth-trigger" id="authTriggerBtn">
+                    Sign In
+                </button>
+
+                <button type="button" class="user-profile-pill hidden" id="userProfileTriggerBtn" title="Profile & Saved Addresses">
+                    <span class="user-avatar-mini" id="topUserAvatarMini">FE</span>
+                    <span class="user-name-short" id="topUserNameShort">Account</span>
+                </button>
+
+                <button type="button" class="btn-sign-out hidden" id="headerSignOutBtn">
+                    Sign Out
+                </button>
+
+                <!-- Cart Drawer Trigger -->
+                <button type="button" class="cart-trigger-btn" id="openCartDrawerBtn" aria-label="Open shopping cart">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <circle cx="9" cy="21" r="1" />
+                        <circle cx="20" cy="21" r="1" />
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                    </svg>
+                    <span class="cart-badge-count" id="cartCountBadge">0</span>
+                    <span class="cart-divider">|</span>
+                    <span class="cart-total-inline" id="cartTotalPriceLabel">$0.00</span>
+                </button>
             </div>
-        </nav>
+        </div>
+    </header>
 
-        <div class="content">
-            <!-- RESTAURANTS VIEW -->
-            <div id="view-restaurants" class="view">
-                <div class="section-header">
-                    <h2>Discover Restaurants & Menus</h2>
-                    <button onclick="loadRestaurants()" class="btn-outline btn-small">Show All</button>
+    <!-- =====================================================================
+         MAIN APPLICATION WORKSPACE
+         ===================================================================== -->
+    <main class="app-main container" id="appMain">
+
+        <!-- ===================================================================
+             VIEW 1: CUSTOMER DISCOVERY HOME FEED
+             =================================================================== -->
+        <section id="homeDiscoveryView" class="view-section active-view">
+
+            <!-- Editorial Hero & Filter Ribbon -->
+            <div class="discovery-banner hidden" aria-hidden="true">
+                <div class="discovery-banner-content">
+                    <span class="eyebrow-tag">Neighborhood Dispatch</span>
+                    <h1 class="editorial-title">Crafted plates from kitchens down the block.</h1>
+                    <p class="editorial-subtitle">
+                        Browse local storefronts, filter by culinary category, or search specific dishes ready for dispatch.
+                    </p>
                 </div>
-
-                <div class="search-bar">
-                    <input type="text" id="search-rest" placeholder="Search restaurants by name or address...">
-                    <button onclick="searchRestaurants()" class="btn-secondary">Search Restaurants</button>
-                    <input type="text" id="search-menu" placeholder="Search all menu items...">
-                    <button onclick="searchMenus()" class="btn-secondary">Search Menus</button>
-                </div>
-
-                <div id="category-filters" class="category-pills"></div>
-
-                <div id="restaurants-list" class="grid"></div>
-
-                <div id="menu-container" class="menu-section" style="display: none;">
-                    <div class="section-header">
-                        <h3 id="menu-title">Menu</h3>
+                <div class="discovery-banner-stats">
+                    <div class="stat-tile">
+                        <span class="stat-num" id="heroRestaurantCount">—</span>
+                        <span class="stat-label">Active Kitchens</span>
                     </div>
-                    <div id="menu-list" class="grid"></div>
+                    <div class="stat-tile">
+                        <span class="stat-num" id="heroCategoryCount">—</span>
+                        <span class="stat-label">Menu Categories</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- CART VIEW -->
-            <div id="view-cart" class="view" style="display: none;">
-                <h2>Your Cart</h2>
-                <div id="cart-items"></div>
-                <div class="checkout-section card">
-                    <h3>Delivery & Checkout</h3>
-                    <label for="checkout-address" class="field-label">Select Delivery Address</label>
-                    <select id="checkout-address"></select>
-                    <button id="checkout-btn" onclick="checkout()" class="btn-primary">Place Order</button>
-                </div>
-            </div>
-
-            <!-- ORDERS VIEW -->
-            <div id="view-orders" class="view" style="display: none;">
-                <div class="section-header">
-                    <h2>My Orders</h2>
-                    <button onclick="loadOrders()" class="btn-outline btn-small">Refresh</button>
-                </div>
-                <div id="my-orders-list" class="grid"></div>
-            </div>
-
-            <!-- PROFILE / ADDRESSES VIEW -->
-            <div id="view-profile" class="view" style="display: none;">
-                <h2>My Profile</h2>
-                <div class="card profile-card">
+            <!-- Horizontal Category Ribbon (GET /api/Menu/categories) -->
+            <section class="category-ribbon-section" aria-label="Food Categories">
+                <div class="section-header-compact">
                     <div>
-                        <h3>Account Details</h3>
-                        <p id="profile-username" class="text-muted"></p>
-                        <p id="profile-email" class="text-muted"></p>
+                        <h2 class="section-title-sm">Filter by Category</h2>
+                        <p class="section-sub-xs">Select a category to filter restaurants &amp; explore matching dishes across the city</p>
                     </div>
-                    <div class="profile-upload-box">
-                        <div id="profile-image-container" class="avatar-wrapper">
-                            <img id="profile-image-preview" src="" alt="Profile" class="avatar-img" style="display: none;">
+                    <div class="ribbon-controls">
+                        <button type="button" class="btn-text-link hidden" id="clearCategoryFilterBtn">Reset Category Filter</button>
+                    </div>
+                </div>
+                <div class="category-ribbon" id="categoryRibbon">
+                    <!-- Populated dynamically via GET /api/Menu/categories -->
+                    <button type="button" class="category-pill active" data-category-id="">All Kitchens</button>
+                </div>
+            </section>
+
+            <!-- Global Dish Search Results Panel (Shown when user searches via GET /api/Menu/search) -->
+            <section class="dishes-showcase-section hidden" id="dishSearchResultsSection">
+                <div class="section-header-bar">
+                    <div>
+                        <span class="eyebrow-tag">Dish Search Results</span>
+                        <h2 class="section-title" id="dishSearchTitle">Matching Dishes</h2>
+                    </div>
+                    <button type="button" class="btn-secondary btn-sm" id="closeDishSearchBtn">Close Search Results</button>
+                </div>
+                <div class="dishes-grid" id="dishSearchResultsGrid"></div>
+            </section>
+
+            <!-- Explore Dishes by Category Section (GET /api/Menu/category/{categoryId}) -->
+            <section class="dishes-showcase-section hidden" id="categoryDishesSection">
+                <div class="section-header-bar">
+                    <div>
+                        <span class="eyebrow-tag">Category Spotlight</span>
+                        <h2 class="section-title" id="categoryDishesTitle">Dishes in Category</h2>
+                    </div>
+                    <button type="button" class="btn-secondary btn-sm" id="hideCategoryDishesBtn">Hide Dish Spotlight</button>
+                </div>
+                <div class="dishes-grid" id="categoryDishesGrid"></div>
+            </section>
+
+            <!-- Main Restaurant Feed with Search, Category Filter & Pagination (GET /api/Restaurants) -->
+            <section class="restaurants-feed-section">
+                <div class="feed-toolbar">
+                    <div class="feed-toolbar-left">
+                        <h2 class="section-title">Restaurants</h2>
+                        <span class="feed-result-meta" id="restaurantsMetaLabel">Loading restaurants...</span>
+                    </div>
+
+                    <div class="feed-toolbar-controls">
+                        <div class="inline-filter-input">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input type="search"
+                                   id="homeRestaurantSearchInput"
+                                   placeholder="Filter feed by keyword..."
+                                   aria-label="Filter restaurants by keyword" />
                         </div>
-                        <input type="file" id="profile-image-input" accept="image/*">
-                        <button onclick="uploadProfileImage()" class="btn-primary">Upload Profile Image</button>
+
+                        <label class="page-size-label" for="restaurantPageSizeSelect">
+                            Per page:
+                            <select id="restaurantPageSizeSelect" class="select-compact">
+                                <option value="6">6</option>
+                                <option value="9" selected>9</option>
+                                <option value="12">12</option>
+                                <option value="24">24</option>
+                            </select>
+                        </label>
+
+                        <button type="button" class="btn-secondary btn-sm" id="refreshRestaurantsFeedBtn">
+                            Refresh Feed
+                        </button>
                     </div>
                 </div>
 
-                <h2 class="section-spacer">My Addresses</h2>
-                <div class="card">
-                    <h3>Add New Delivery Address</h3>
-                    <div class="form-row">
-                        <input type="text" id="addr-city" placeholder="City (e.g., Tbilisi)">
-                        <input type="text" id="addr-street" placeholder="Street Address (min 5 chars)">
-                    </div>
-                    <button onclick="addAddress()" class="btn-secondary">Add Address</button>
+                <!-- Restaurant Cards Grid -->
+                <div class="restaurants-grid" id="restaurantsGrid">
+                    <!-- Populated dynamically via GET /api/Restaurants -->
                 </div>
-                <div id="addresses-list" class="grid section-spacer-sm"></div>
+
+                <!-- Pagination Bar -->
+                <div class="pagination-bar" id="restaurantsPaginationBar">
+                    <button type="button" class="btn-secondary btn-sm" id="prevPageBtn" disabled>
+                        &larr; Previous Page
+                    </button>
+                    <span class="pagination-status" id="paginationInfo">Page 1</span>
+                    <button type="button" class="btn-secondary btn-sm" id="nextPageBtn">
+                        Next Page &rarr;
+                    </button>
+                </div>
+            </section>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 2: DEDICATED RESTAURANT STOREFRONT VIEW
+             (GET /api/Restaurants/{id}, GET /api/Restaurants/{id}/menu,
+              GET /api/Menu/search?q={term}&restaurantId={id})
+             =================================================================== -->
+        <section id="storefrontView" class="view-section hidden">
+            <div class="storefront-top-nav">
+                <button type="button" class="btn-back" id="backToFeedBtn">
+                    &larr; Back to restaurants
+                </button>
+                <div class="storefront-top-actions">
+                    <button type="button" class="btn-secondary btn-sm" id="refreshStorefrontMenuBtn">
+                        Refresh Kitchen Menu
+                    </button>
+                    <!-- Visible only to Admins: wired to POST /api/Restaurants/{id}/menu -->
+                    <button type="button" class="btn-primary btn-sm hidden" id="openStorefrontAddDishModalBtn">
+                        + Add Dish to This Kitchen
+                    </button>
+                </div>
             </div>
 
-            <!-- ADMIN VIEW -->
-            <div id="view-admin" class="view" style="display: none;">
-                <h2>Admin Dashboard</h2>
-                <div class="grid">
-                    <!-- Manage Restaurants -->
-                    <div class="card">
-                        <h3>Restaurants (CRUD)</h3>
-                        <input type="number" id="adm-rest-id" placeholder="Restaurant ID (for Update/Delete)">
-                        <input type="text" id="adm-rest-name" placeholder="Restaurant Name">
-                        <input type="text" id="adm-rest-address" placeholder="Restaurant Address">
-                        <div class="btn-group">
-                            <button onclick="adminAddRestaurant()" class="btn-primary">Add</button>
-                            <button onclick="adminUpdateRestaurant()" class="btn-secondary">Update</button>
-                            <button onclick="adminDeleteRestaurant()" class="btn-accent">Delete</button>
-                        </div>
-                        <div class="card-divider">
-                            <h4>Upload Restaurant Image</h4>
-                            <input type="number" id="adm-rest-img-id" placeholder="Restaurant ID">
-                            <input type="file" id="adm-rest-image-input" accept="image/*">
-                            <button onclick="uploadRestaurantImage()" class="btn-primary">Upload Image</button>
-                        </div>
+            <!-- Storefront Cover Hero -->
+            <div class="storefront-hero" id="storefrontHero">
+                <div class="storefront-hero-media" id="storefrontBannerWrap">
+                    <!-- Populated with restaurant image or earthy SVG illustration -->
+                </div>
+                <div class="storefront-hero-info">
+                    <div class="storefront-badges">
+                        <span class="status-pill open" id="storefrontStatusBadge">Open</span>
+                        <span class="badge-wheat hidden" id="storefrontIdBadge">ID #—</span>
                     </div>
+                    <h1 class="storefront-title" id="storefrontName">Restaurant Name</h1>
+                    <p class="storefront-address" id="storefrontAddress">Street Address</p>
+                    <p class="storefront-closed-note hidden" id="storefrontClosedNote">This restaurant is temporarily closed and not accepting orders.</p>
+                </div>
+            </div>
 
-                    <!-- Manage Menu Items -->
-                    <div class="card">
-                        <h3>Menu Items (CRUD)</h3>
-                        <input type="number" id="adm-menu-id" placeholder="Menu Item ID (for Update/Delete)">
-                        <input type="number" id="adm-menu-restId" placeholder="Restaurant ID">
-                        <input type="number" id="adm-menu-catId" placeholder="Category ID (see available list)">
-                        <input type="text" id="adm-menu-name" placeholder="Item Name">
-                        <input type="number" step="0.01" id="adm-menu-price" placeholder="Price ($)">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="adm-menu-avail" checked> Available for Order
-                        </label>
-                        <div class="btn-group">
-                            <button onclick="adminAddMenuItem()" class="btn-primary">Add</button>
-                            <button onclick="adminUpdateMenuItem()" class="btn-secondary">Update</button>
-                            <button onclick="adminDeleteMenuItem()" class="btn-accent">Delete</button>
+            <!-- Storefront Menu Controls: In-Restaurant Dish Search (GET /api/Menu/search?q=&restaurantId=) -->
+            <div class="storefront-toolbar">
+                <div class="storefront-tabs">
+                    <button type="button" class="tab-pill active" id="storefrontFullMenuTab">
+                        Full Kitchen Menu (<span id="storefrontDishCount">0</span>)
+                    </button>
+                </div>
+
+                <form class="storefront-search-form" id="storefrontDishSearchForm">
+                    <input type="search"
+                           id="storefrontDishSearchInput"
+                           placeholder="Search inside this restaurant's menu..."
+                           autocomplete="off" />
+                    <button type="submit" class="btn-secondary btn-sm">Filter Menu</button>
+                    <button type="button" class="btn-text-link hidden" id="clearStorefrontSearchBtn">Reset</button>
+                </form>
+            </div>
+
+            <!-- Storefront Dishes Grid -->
+            <div class="dishes-grid" id="storefrontMenuGrid">
+                <!-- Populated via GET /api/Restaurants/{id}/menu or GET /api/Menu/search?q=&restaurantId= -->
+            </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 3: CUSTOMER "MY ORDERS" TRACKING VIEW
+             (GET /api/Orders/my, GET /api/Orders/{id}, PATCH /api/Orders/{id}/status)
+             =================================================================== -->
+        <section id="myOrdersView" class="view-section hidden">
+            <div class="section-header-bar">
+                <div>
+                    <span class="eyebrow-tag">Order History &amp; Live Dispatch</span>
+                    <h1 class="editorial-title-sm">My Orders</h1>
+                    <p class="section-sub-xs">
+                        Track live kitchen status or cancel orders while they are in <strong>Created</strong> or <strong>Confirmed</strong> state.
+                    </p>
+                </div>
+                <button type="button" class="btn-secondary btn-sm" id="refreshMyOrdersBtn">
+                    Refresh Orders
+                </button>
+            </div>
+
+            <div class="orders-list-grid" id="myOrdersGrid">
+                <!-- Populated dynamically via GET /api/Orders/my -->
+            </div>
+        </section>
+
+        <!-- ===================================================================
+             VIEW 4: FRICTIONLESS ADMIN CONTROL CENTER (DROPDOWN-DRIVEN UX)
+             =================================================================== -->
+        <section id="adminDashboardView" class="view-section hidden">
+            <div class="admin-header-banner">
+                <div>
+                    <span class="eyebrow-tag">Operations &amp; Catalog Control</span>
+                    <h1 class="editorial-title-sm">Admin</h1>
+                    <p class="section-sub-xs">
+                        Update restaurants, dishes, and orders. Pause a restaurant when it should stop accepting orders.
+                    </p>
+                </div>
+                <div class="admin-header-actions">
+                    <!-- Secondary Restaurant Creation Route Trigger (POST /api/Restaurants) -->
+                    <button type="button" class="btn-secondary btn-sm" id="openQuickCreateRestaurantModalBtn">
+                        + Add restaurant
+                    </button>
+                    <button type="button" class="btn-primary btn-sm" id="adminSyncAllDataBtn">
+                        Sync All Admin Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Tab Bar -->
+            <div class="admin-tabs-bar" role="tablist">
+                <button type="button" class="admin-tab-btn active" data-admin-tab="tabRestaurants">
+                    1. Restaurant Management
+                </button>
+                <button type="button" class="admin-tab-btn" data-admin-tab="tabMenuItems">
+                    2. Menu Item Management
+                </button>
+                <button type="button" class="admin-tab-btn" data-admin-tab="tabCategoriesUsers">
+                    3. Categories &amp; User Roles
+                </button>
+                <button type="button" class="admin-tab-btn" data-admin-tab="tabOrdersBoard">
+                    4. Live Order Operations Board
+                </button>
+            </div>
+
+            <!-- -----------------------------------------------------------------
+                 ADMIN TAB 1: RESTAURANT MANAGEMENT
+                 (GET /api/Restaurants, POST /api/Admin/restaurants,
+                  PUT /api/Admin/restaurants/{id}, DELETE /api/Admin/restaurants/{id},
+                  POST /api/Admin/restaurants/{id}/image)
+                 ----------------------------------------------------------------- -->
+            <div class="admin-tab-panel active-tab-panel" id="tabRestaurants">
+                <div class="admin-two-col">
+                    <!-- Left Card: Dropdown-Driven Edit, Image Upload & Delete -->
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <span class="badge-moss">Auto-Fill Editor</span>
+                            <h3>Select &amp; Manage Existing Restaurant</h3>
+                            <p>Choose any restaurant below to auto-populate its details, upload a cover photo, or delete it.</p>
                         </div>
-                        <div class="card-divider">
-                            <h4>Upload Menu Item Image</h4>
-                            <input type="number" id="adm-menu-img-id" placeholder="Menu Item ID">
-                            <input type="file" id="adm-menu-image-input" accept="image/*">
-                            <button onclick="uploadMenuItemImage()" class="btn-primary">Upload Image</button>
-                        </div>
-                    </div>
 
-                    <!-- Manage Categories & Orders -->
-                    <div class="card">
-                        <h3>Categories</h3>
-                        <div id="admin-categories-hint" class="category-hint"></div>
-                        <input type="text" id="adm-cat-name" placeholder="New Category Name">
-                        <button onclick="adminAddCategory()" class="btn-primary">Add Category</button>
-
-                        <div class="card-divider">
-                            <h3>Order State Machine</h3>
-                            <p class="text-muted small-note">Valid flow: Created &rarr; Confirmed &rarr; Preparing &rarr; OnTheWay &rarr; Delivered</p>
-                            <input type="number" id="adm-ord-id" placeholder="Order ID">
-                            <select id="adm-ord-status">
-                                <option value="1">1 - Confirmed</option>
-                                <option value="2">2 - Preparing</option>
-                                <option value="3">3 - OnTheWay</option>
-                                <option value="4">4 - Delivered</option>
-                                <option value="5">5 - Cancelled</option>
+                        <div class="form-group">
+                            <label for="adminRestaurantSelect">Select Restaurant</label>
+                            <select id="adminRestaurantSelect" class="form-select">
+                                <option value="">-- Choose a restaurant to manage --</option>
                             </select>
-                            <div class="btn-group">
-                                <button onclick="adminUpdateOrderStatus()" class="btn-secondary">Update Status</button>
-                                <button onclick="adminLoadAllOrders()" class="btn-outline">Refresh Orders</button>
+                        </div>
+
+                        <!-- Auto-Filled Edit Form (PUT /api/Admin/restaurants/{id}) -->
+                        <form id="adminEditRestaurantForm" class="admin-form-stack">
+                            <input type="hidden" id="adminEditRestId" />
+                            <input type="hidden" id="adminEditRestImagePath" />
+
+                            <div class="form-group">
+                                <label for="adminEditRestName">Restaurant Name</label>
+                                <input type="text" id="adminEditRestName" class="form-input" placeholder="Select a restaurant above..." required disabled />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adminEditRestAddress">Street Address</label>
+                                <input type="text" id="adminEditRestAddress" class="form-input" placeholder="Select a restaurant above..." required disabled />
+                            </div>
+
+                            <label class="checkbox-row" for="adminEditRestIsActive">
+                                <input type="checkbox" id="adminEditRestIsActive" checked disabled />
+                                <span>Accepting orders</span>
+                            </label>
+
+                            <div class="admin-preview-strip" id="adminRestCurrentImagePreview">
+                                <span class="muted-helper">No restaurant selected.</span>
+                            </div>
+
+                            <div class="form-actions-row">
+                                <button type="submit" class="btn-primary" id="adminSaveRestaurantBtn" disabled>
+                                    Save Changes
+                                </button>
+                                <button type="button" class="btn-danger" id="adminDeleteRestaurantBtn" disabled>
+                                    Delete Restaurant
+                                </button>
+                            </div>
+                        </form>
+
+                        <hr class="admin-divider" />
+
+                        <!-- Cover Image Upload Form (POST /api/Admin/restaurants/{id}/image) -->
+                        <form id="adminRestImageForm" class="admin-form-stack">
+                            <h4>Upload Cover Image</h4>
+                            <div class="file-upload-row">
+                                <input type="file" id="adminRestImageInput" accept="image/*" class="form-file-input" disabled required />
+                                <button type="submit" class="btn-secondary" id="adminUploadRestImageBtn" disabled>
+                                    Upload Cover
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right Card: Create New Restaurant (POST /api/Admin/restaurants) -->
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <span class="badge-wheat">New Partner</span>
+                            <h3>Create Restaurant</h3>
+                            <p>Onboard a new restaurant kitchen to the platform catalog.</p>
+                        </div>
+
+                        <form id="adminCreateRestaurantForm" class="admin-form-stack">
+                            <div class="form-group">
+                                <label for="adminNewRestName">Restaurant Name</label>
+                                <input type="text"
+                                       id="adminNewRestName"
+                                       class="form-input"
+                                       placeholder="e.g., Terra & Hearth Woodfired Kitchen"
+                                       required />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adminNewRestAddress">Full Street Address</label>
+                                <input type="text"
+                                       id="adminNewRestAddress"
+                                       class="form-input"
+                                       placeholder="e.g., 42 Kostava Avenue, Tbilisi"
+                                       required />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adminNewRestImagePath">Image URL (optional)</label>
+                                <input type="text"
+                                       id="adminNewRestImagePath"
+                                       class="form-input"
+                                       placeholder="Leave blank or provide an image URL" />
+                            </div>
+
+                            <label class="checkbox-row" for="adminNewRestIsActive">
+                                <input type="checkbox" id="adminNewRestIsActive" checked />
+                                <span>Accepting orders</span>
+                            </label>
+
+                            <button type="submit" class="btn-primary">
+                                Add restaurant
+                            </button>
+                        </form>
+
+                        <div class="admin-callout-box">
+                            <p>
+                                <strong>Shorter form.</strong> Add a restaurant with
+                                name and address only:
+                            </p>
+                            <button type="button" class="btn-secondary btn-sm" id="openQuickCreateRestFromTabBtn">
+                                Open short form
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- -----------------------------------------------------------------
+                 ADMIN TAB 2: MENU ITEM MANAGEMENT (TWO-STEP SMART DROPDOWNS)
+                 (GET /api/Menu/restaurant/{restaurantId}, GET /api/Admin/categories,
+                  PUT /api/Admin/menuitems/{id}, DELETE /api/Admin/menuitems/{id},
+                  POST /api/Admin/menuitems/{id}/image, POST /api/Admin/menuitems)
+                 ----------------------------------------------------------------- -->
+            <div class="admin-tab-panel hidden" id="tabMenuItems">
+                <div class="admin-two-col">
+                    <!-- Left Card: Two-Step Smart Dropdown Dish Editor -->
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <span class="badge-moss">2-Step Smart Selector</span>
+                            <h3>Modify or Delete Existing Dish</h3>
+                            <p>Step 1: Pick a restaurant. Step 2: Pick a dish to auto-fill all fields.</p>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="adminMenuRestaurantSelect">1. Select Restaurant</label>
+                                <select id="adminMenuRestaurantSelect" class="form-select">
+                                    <option value="">-- Select Restaurant --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adminMenuDishSelect">2. Select Dish</label>
+                                <select id="adminMenuDishSelect" class="form-select" disabled>
+                                    <option value="">-- Choose restaurant first --</option>
+                                </select>
                             </div>
                         </div>
 
-                        <div class="card-divider">
-                            <h3>Promote User to Admin</h3>
-                            <input type="email" id="adm-promote-email" placeholder="Registered User Email (e.g., john@gmail.com)">
-                            <button onclick="adminPromoteUser()" class="btn-primary">Grant Admin Role</button>
+                        <!-- Auto-Filled Dish Update Form (PUT /api/Admin/menuitems/{id}) -->
+                        <form id="adminEditMenuItemForm" class="admin-form-stack">
+                            <input type="hidden" id="adminEditDishId" />
+                            <input type="hidden" id="adminEditDishRestaurantId" />
+                            <input type="hidden" id="adminEditDishImagePath" />
+
+                            <div class="form-group">
+                                <label for="adminEditDishName">Dish Name</label>
+                                <input type="text" id="adminEditDishName" class="form-input" required disabled />
+                            </div>
+
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label for="adminEditDishPrice">Price ($)</label>
+                                    <input type="number" id="adminEditDishPrice" class="form-input" step="0.01" min="0.01" required disabled />
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="adminEditDishCategorySelect">Category</label>
+                                    <select id="adminEditDishCategorySelect" class="form-select" required disabled>
+                                        <option value="">-- Category --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <label class="checkbox-row" for="adminEditDishAvailable">
+                                <input type="checkbox" id="adminEditDishAvailable" checked disabled />
+                                <span>Dish is currently available for ordering</span>
+                            </label>
+
+                            <div class="admin-preview-strip" id="adminDishCurrentImagePreview">
+                                <span class="muted-helper">Select a dish above to inspect its current photo and metadata.</span>
+                            </div>
+
+                            <div class="form-actions-row">
+                                <button type="submit" class="btn-primary" id="adminUpdateDishBtn" disabled>
+                                    Update Dish
+                                </button>
+                                <button type="button" class="btn-danger" id="adminDeleteDishBtn" disabled>
+                                    Delete Dish
+                                </button>
+                            </div>
+                        </form>
+
+                        <hr class="admin-divider" />
+
+                        <!-- Upload Dish Photo Form (POST /api/Admin/menuitems/{id}/image) -->
+                        <form id="adminDishImageForm" class="admin-form-stack">
+                            <h4>Upload Dish Photo</h4>
+                            <div class="file-upload-row">
+                                <input type="file" id="adminDishImageInput" accept="image/*" class="form-file-input" disabled required />
+                                <button type="submit" class="btn-secondary" id="adminUploadDishImageBtn" disabled>
+                                    Upload Photo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right Card: Create New Dish (POST /api/Admin/menuitems) -->
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <span class="badge-wheat">Catalog Addition</span>
+                            <h3>Add New Dish</h3>
+                            <p>Assign a new dish to any restaurant and category using dropdown selectors.</p>
                         </div>
+
+                        <form id="adminCreateMenuItemForm" class="admin-form-stack">
+                            <div class="form-group">
+                                <label for="adminNewDishRestaurantSelect">Target Restaurant</label>
+                                <select id="adminNewDishRestaurantSelect" class="form-select" required>
+                                    <option value="">-- Select Target Restaurant --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adminNewDishCategorySelect">Target Category</label>
+                                <select id="adminNewDishCategorySelect" class="form-select" required>
+                                    <option value="">-- Select Target Category --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adminNewDishName">Dish Title</label>
+                                <input type="text"
+                                       id="adminNewDishName"
+                                       class="form-input"
+                                       placeholder="e.g., Charred Eggplant & Pomegranate Khachapuri"
+                                       required />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adminNewDishPrice">Price ($)</label>
+                                <input type="number"
+                                       id="adminNewDishPrice"
+                                       class="form-input"
+                                       step="0.01"
+                                       min="0.01"
+                                       placeholder="14.50"
+                                       required />
+                            </div>
+
+                            <label class="checkbox-row" for="adminNewDishAvailable">
+                                <input type="checkbox" id="adminNewDishAvailable" checked />
+                                <span>Immediately available on restaurant menu</span>
+                            </label>
+
+                            <button type="submit" class="btn-primary">
+                                Add Dish
+                            </button>
+                        </form>
                     </div>
                 </div>
+            </div>
 
-                <h3 class="section-spacer">All Customer Orders</h3>
-                <div id="admin-orders-list" class="grid section-spacer-sm"></div>
+            <!-- -----------------------------------------------------------------
+                 ADMIN TAB 3: CATEGORY & USER ROLE MANAGEMENT
+                 (GET /api/Admin/categories, POST /api/Admin/categories,
+                  POST /api/Admin/users/promote?email=...)
+                 ----------------------------------------------------------------- -->
+            <div class="admin-tab-panel hidden" id="tabCategoriesUsers">
+                <div class="admin-two-col">
+                    <!-- Left Card: Categories Manager -->
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <span class="badge-moss">Taxonomy</span>
+                            <h3>Menu Categories ( &amp; )</h3>
+                            <p>Create culinary categories and immediately sync all dropdowns &amp; discovery pills.</p>
+                        </div>
+
+                        <form id="adminCreateCategoryForm" class="inline-create-form">
+                            <input type="text"
+                                   id="adminCategoryNameInput"
+                                   class="form-input"
+                                   placeholder="New category name (2-50 chars)..."
+                                   minlength="2"
+                                   maxlength="50"
+                                   required />
+                            <button type="submit" class="btn-primary">Add Category</button>
+                        </form>
+
+                        <div class="admin-categories-list" id="adminCategoriesList">
+                            <!-- Populated via GET /api/Admin/categories -->
+                        </div>
+                    </div>
+
+                    <!-- Right Card: Promote User to Admin -->
+                    <div class="admin-card">
+                        <div class="admin-card-header">
+                            <span class="badge-wheat">Access Control</span>
+                            <h3>Promote User to Admin Role</h3>
+                            <p>Grants Admin privileges via query parameter <code>POST /api/Admin/users/promote?email=...</code></p>
+                        </div>
+
+                        <form id="adminPromoteUserForm" class="admin-form-stack">
+                            <div class="form-group">
+                                <label for="adminPromoteEmailInput">Registered User Email Address</label>
+                                <input type="email"
+                                       id="adminPromoteEmailInput"
+                                       class="form-input"
+                                       placeholder="user@example.com"
+                                       required />
+                            </div>
+                            <button type="submit" class="btn-primary">
+                                Promote User to Admin
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- -----------------------------------------------------------------
+                 ADMIN TAB 4: LIVE ORDER OPERATIONS BOARD
+                 (GET /api/Orders, PATCH /api/Orders/{id}/status, GET /api/Orders/{id})
+                 ----------------------------------------------------------------- -->
+            <div class="admin-tab-panel hidden" id="tabOrdersBoard">
+                <div class="admin-orders-toolbar">
+                    <div class="status-filter-pills" id="adminOrderStatusFilterBar">
+                        <button type="button" class="status-filter-pill active" data-status-filter="ALL">All Orders</button>
+                        <button type="button" class="status-filter-pill" data-status-filter="0">0 · Created</button>
+                        <button type="button" class="status-filter-pill" data-status-filter="1">1 · Confirmed</button>
+                        <button type="button" class="status-filter-pill" data-status-filter="2">2 · Preparing</button>
+                        <button type="button" class="status-filter-pill" data-status-filter="3">3 · OnTheWay</button>
+                        <button type="button" class="status-filter-pill" data-status-filter="4">4 · Delivered</button>
+                        <button type="button" class="status-filter-pill" data-status-filter="5">5 · Cancelled</button>
+                    </div>
+                    <button type="button" class="btn-secondary btn-sm" id="adminRefreshOrdersBtn">
+                        Refresh Live Orders
+                    </button>
+                </div>
+
+                <div class="admin-orders-grid" id="adminOrdersBoard">
+                    <!-- Populated dynamically via GET /api/Orders -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- =====================================================================
+         SLIDE-OVER DRAWER 1: SHOPPING CART & CHECKOUT
+         (GET /api/Cart, POST /api/Cart/items, PUT /api/Cart/items/{menuItemId},
+          DELETE /api/Cart/items/{menuItemId}, POST /api/Orders)
+         ===================================================================== -->
+    <div class="drawer-backdrop hidden" id="cartDrawerBackdrop"></div>
+    <aside class="slide-drawer hidden" id="cartDrawer" aria-label="Shopping Cart">
+        <div class="drawer-header">
+            <div>
+                <span class="eyebrow-tag">Your Basket</span>
+                <h2 class="drawer-title">Current Order</h2>
+            </div>
+            <button type="button" class="btn-close-circle" id="closeCartDrawerBtn" aria-label="Close Cart">&times;</button>
+        </div>
+
+        <!-- Active Cart Restaurant Banner -->
+        <div class="cart-kitchen-banner hidden" id="cartRestaurantBanner">
+            <span>Ordering from: <strong id="cartRestaurantNameLabel">—</strong></span>
+            <span class="badge-wheat" id="cartRestaurantIdLabel"></span>
+        </div>
+
+        <!-- Cart Items Scrollable Area -->
+        <div class="drawer-body" id="cartItemsList">
+            <!-- Populated via GET /api/Cart -->
+        </div>
+
+        <!-- Checkout Footer -->
+        <div class="drawer-footer" id="cartDrawerFooter">
+            <!-- Delivery Address Selector (Populated via GET /api/Addresses/my) -->
+            <div class="checkout-address-box">
+                <div class="checkout-address-header">
+                    <label for="checkoutAddressSelect">Delivery Address</label>
+                    <button type="button" class="btn-text-link" id="toggleCartQuickAddressBtn">+ New Address</button>
+                </div>
+                <select id="checkoutAddressSelect" class="form-select">
+                    <option value="">Select delivery address...</option>
+                </select>
+
+                <!-- Inline Quick Address Form inside Checkout (POST /api/Addresses) -->
+                <form id="cartAddAddressForm" class="quick-address-form hidden">
+                    <input type="text"
+                           id="cartStreetInput"
+                           class="form-input form-input-sm"
+                           placeholder="Street address (5-200 chars)"
+                           minlength="5"
+                           maxlength="200"
+                           required />
+                    <div class="quick-address-row">
+                        <input type="text"
+                               id="cartCityInput"
+                               class="form-input form-input-sm"
+                               placeholder="City (2-100 chars)"
+                               minlength="2"
+                               maxlength="100"
+                               required />
+                        <button type="submit" class="btn-secondary btn-sm">Save</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="cart-summary-lines">
+                <div class="summary-line summary-total">
+                    <span>Total Amount</span>
+                    <strong id="cartDrawerTotal">$0.00</strong>
+                </div>
+            </div>
+
+            <button type="button" class="btn-primary btn-block btn-lg" id="placeOrderBtn">
+                Place Order
+            </button>
+        </div>
+    </aside>
+
+    <!-- =====================================================================
+         SLIDE-OVER DRAWER 2: RESTAURANT CARD "PREVIEW DISHES" DRAWER
+         (Explicitly wired to GET /api/Menu/restaurant/{restaurantId})
+         ===================================================================== -->
+    <div class="drawer-backdrop hidden" id="previewDishesBackdrop"></div>
+    <aside class="slide-drawer hidden" id="previewDishesDrawer" aria-label="Kitchen Menu Preview">
+        <div class="drawer-header">
+            <div>
+                <span class="eyebrow-tag">Quick Kitchen Peek</span>
+                <h2 class="drawer-title" id="previewDrawerRestaurantName">Kitchen Dishes</h2>
+            </div>
+            <button type="button" class="btn-close-circle" id="closePreviewDishesDrawerBtn" aria-label="Close Preview">&times;</button>
+        </div>
+        <div class="drawer-body" id="previewDishesList"></div>
+        <div class="drawer-footer">
+            <button type="button" class="btn-primary btn-block" id="previewOpenFullStorefrontBtn">
+                Open Full Restaurant Storefront
+            </button>
+        </div>
+    </aside>
+
+    <!-- =====================================================================
+         MODAL 1: DISH QUICK-VIEW / DETAIL MODAL (GET /api/Menu/{id})
+         ===================================================================== -->
+    <div class="modal-backdrop hidden" id="dishDetailModal">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="dishModalName">
+            <button type="button" class="btn-close-circle modal-close-floating" id="closeDishModalBtn" aria-label="Close">&times;</button>
+            <div class="dish-modal-media" id="dishModalImageWrap"></div>
+            <div class="modal-body">
+                <div class="dish-modal-meta">
+                    <span class="badge-moss" id="dishModalCategoryBadge">Category</span>
+                    <span class="badge-availability" id="dishModalAvailabilityBadge">Available</span>
+                </div>
+                <h2 class="modal-title" id="dishModalName">Dish Name</h2>
+                <p class="dish-modal-kitchen">
+                    Prepared by <strong id="dishModalRestaurantName">Kitchen</strong>
+                </p>
+                <div class="dish-modal-price-row">
+                    <span class="dish-modal-price" id="dishModalPrice">$0.00</span>
+                    <span class="muted-helper" id="dishModalIdLabel">Item #—</span>
+                </div>
+
+                <div class="dish-modal-actions">
+                    <div class="qty-stepper">
+                        <button type="button" class="qty-btn" id="dishModalQtyMinus" aria-label="Decrease quantity">&minus;</button>
+                        <input type="number" id="dishModalQtyInput" value="1" min="1" max="99" aria-label="Quantity" />
+                        <button type="button" class="qty-btn" id="dishModalQtyPlus" aria-label="Increase quantity">+</button>
+                    </div>
+                    <button type="button" class="btn-primary btn-flex-grow" id="dishModalAddToCartBtn">
+                        Add to Basket
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- =====================================================================
+         MODAL 2: AUTHENTICATION (LOGIN / REGISTER)
+         (POST /api/Auth/Login, POST /api/Auth/Register)
+         ===================================================================== -->
+    <div class="modal-backdrop hidden" id="authModal">
+        <div class="modal-card modal-sm" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow-tag">Account Access</span>
+                    <h2 class="modal-title" id="authModalTitle">Welcome to FoodExpress</h2>
+                </div>
+                <button type="button" class="btn-close-circle" id="closeAuthModalBtn" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab active" id="tabLoginBtn">Sign In</button>
+                <button type="button" class="auth-tab" id="tabRegisterBtn">Create Account</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Login Form (POST /api/Auth/Login) -->
+                <form id="loginForm" class="admin-form-stack">
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" class="form-input" placeholder="you@example.com" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required />
+                    </div>
+                    <button type="submit" class="btn-primary btn-block">Sign In</button>
+                </form>
+
+                <!-- Register Form (POST /api/Auth/Register) -->
+                <form id="registerForm" class="admin-form-stack hidden">
+                    <div class="form-group">
+                        <label for="regUserName">Username (3–50 characters)</label>
+                        <input type="text"
+                               id="regUserName"
+                               class="form-input"
+                               placeholder="e.g., nino_k"
+                               minlength="3"
+                               maxlength="50"
+                               required />
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email Address</label>
+                        <input type="email" id="regEmail" class="form-input" placeholder="you@example.com" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Password (8–100 characters)</label>
+                        <input type="password"
+                               id="regPassword"
+                               class="form-input"
+                               placeholder="Minimum 8 characters"
+                               minlength="8"
+                               maxlength="100"
+                               required />
+                    </div>
+                    <button type="submit" class="btn-primary btn-block">Create Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 3: USER PROFILE & SAVED ADDRESSES MANAGER
+         (GET /api/Users/profile, POST /api/Users/profile-image,
+          GET /api/Addresses/my, POST /api/Addresses, DELETE /api/Addresses/{id})
+         ===================================================================== -->
+    <div class="modal-backdrop hidden" id="profileModal">
+        <div class="modal-card modal-lg" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow-tag">Member Profile</span>
+                    <h2 class="modal-title" id="profileModalTitle">Account &amp; Delivery Addresses</h2>
+                </div>
+                <button type="button" class="btn-close-circle" id="closeProfileModalBtn" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="modal-body profile-modal-grid">
+                <!-- Left Column: Profile Info & Avatar Upload -->
+                <div class="profile-info-col">
+                    <div class="profile-avatar-card">
+                        <div class="profile-avatar-frame" id="profileAvatarFrame">
+                            <!-- Populated with user image or SVG avatar -->
+                        </div>
+                        <div class="profile-identity">
+                            <h3 id="profileNameDisplay">—</h3>
+                            <p id="profileEmailDisplay" class="muted-helper">—</p>
+                            <div class="profile-roles-row" id="profileRolesBadges"></div>
+                        </div>
+                    </div>
+
+                    <form id="profileImageForm" class="admin-form-stack">
+                        <label for="profileImageInput">Update Profile Picture</label>
+                        <input type="file" id="profileImageInput" accept="image/*" class="form-file-input" required />
+                        <div class="avatar-preview-strip hidden" id="profileImageLivePreviewWrap">
+                            <img id="profileImageLivePreview" alt="Selected avatar preview" />
+                        </div>
+                        <button type="submit" class="btn-secondary btn-sm">Upload New Avatar</button>
+                    </form>
+
+                    <hr class="admin-divider" />
+
+                    <button type="button" class="btn-danger btn-block" id="logoutBtn">
+                        Sign Out of FoodExpress
+                    </button>
+                </div>
+
+                <!-- Right Column: Saved Addresses (GET / POST / DELETE /api/Addresses) -->
+                <div class="profile-addresses-col">
+                    <h4>Saved Delivery Addresses</h4>
+                    <div class="saved-addresses-list" id="savedAddressesList">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <form id="profileAddAddressForm" class="admin-form-stack address-add-card">
+                        <h5>Add New Address</h5>
+                        <div class="form-group">
+                            <label for="profileStreetInput">Street &amp; Building (5–200 chars)</label>
+                            <input type="text"
+                                   id="profileStreetInput"
+                                   class="form-input"
+                                   placeholder="e.g., 14 Chavchavadze Ave, Apt 12"
+                                   minlength="5"
+                                   maxlength="200"
+                                   required />
+                        </div>
+                        <div class="form-group">
+                            <label for="profileCityInput">City (2–100 chars)</label>
+                            <input type="text"
+                                   id="profileCityInput"
+                                   class="form-input"
+                                   placeholder="e.g., Tbilisi"
+                                   minlength="2"
+                                   maxlength="100"
+                                   required />
+                        </div>
+                        <button type="submit" class="btn-primary btn-sm">Save &amp; Select Address</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 4: ORDER RECEIPT & LIVE TRACKER MODAL (GET /api/Orders/{id})
+         ===================================================================== -->
+    <div class="modal-backdrop hidden" id="orderDetailModal">
+        <div class="modal-card modal-lg" role="dialog" aria-modal="true" aria-labelledby="orderModalTitle">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow-tag">Official Dispatch Receipt</span>
+                    <h2 class="modal-title" id="orderModalTitle">Order #—</h2>
+                </div>
+                <button type="button" class="btn-close-circle" id="closeOrderDetailModalBtn" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="modal-body" id="orderDetailModalBody">
+                <!-- Populated dynamically via GET /api/Orders/{id} -->
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 5: CART RESTAURANT CONFLICT PROMPT
+         (Enforces single-restaurant cart rule cleanly)
+         ===================================================================== -->
+    <div class="modal-backdrop hidden" id="cartConflictModal">
+        <div class="modal-card modal-sm" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow-tag">Different Kitchen Selected</span>
+                    <h2 class="modal-title">Start a fresh basket?</h2>
+                </div>
+                <button type="button" class="btn-close-circle" id="closeCartConflictModalBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="cartConflictMessage" class="conflict-text">
+                    Your cart currently contains items from another restaurant. All items in an order must come from the same kitchen.
+                </p>
+                <div class="form-actions-row">
+                    <button type="button" class="btn-secondary" id="cancelConflictBtn">Keep Current Basket</button>
+                    <button type="button" class="btn-danger" id="confirmClearAndAddBtn">
+                        Clear Basket &amp; Add Item
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 6: STOREFRONT QUICK-ADD DISH MODAL FOR ADMINS
+         (Explicitly wired to POST /api/Restaurants/{id}/menu)
+         ===================================================================== -->
+    <div class="modal-backdrop hidden" id="storefrontAddDishModal">
+        <div class="modal-card modal-sm" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow-tag">Storefront Admin Action</span>
+                    <h2 class="modal-title">Add Dish to This Kitchen</h2>
+                </div>
+                <button type="button" class="btn-close-circle" id="closeStorefrontAddDishModalBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="storefrontAddDishForm" class="admin-form-stack">
+                    <div class="form-group">
+                        <label for="sfDishNameInput">Dish Name</label>
+                        <input type="text" id="sfDishNameInput" class="form-input" placeholder="e.g., Woodfired Flatbread" required />
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="sfDishPriceInput">Price ($)</label>
+                            <input type="number" id="sfDishPriceInput" class="form-input" step="0.01" min="0.01" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="sfDishCategorySelect">Category</label>
+                            <select id="sfDishCategorySelect" class="form-select" required></select>
+                        </div>
+                    </div>
+                    <label class="checkbox-row" for="sfDishAvailableInput">
+                        <input type="checkbox" id="sfDishAvailableInput" checked />
+                        <span>Available immediately</span>
+                    </label>
+                    <button type="submit" class="btn-primary btn-block">
+                        Publish Dish
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 7: QUICK CREATE RESTAURANT MODAL FOR ADMINS
+         (Explicitly wired to POST /api/Restaurants)
+         ===================================================================== -->
+    <div class="modal-backdrop hidden" id="quickCreateRestaurantModal">
+        <div class="modal-card modal-sm" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow-tag">Restaurant</span>
+                    <h2 class="modal-title">Add restaurant</h2>
+                </div>
+                <button type="button" class="btn-close-circle" id="closeQuickCreateRestaurantModalBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="quickCreateRestaurantForm" class="admin-form-stack">
+                    <div class="form-group">
+                        <label for="quickRestNameInput">Restaurant Name</label>
+                        <input type="text" id="quickRestNameInput" class="form-input" placeholder="e.g., Saffron & Clay" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="quickRestAddressInput">Street Address</label>
+                        <input type="text" id="quickRestAddressInput" class="form-input" placeholder="e.g., 19 Melikishvili St" required />
+                    </div>
+                    <button type="submit" class="btn-primary btn-block">
+                        Add restaurant
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         FOOTER
+         ===================================================================== -->
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <span class="brand-text">Food<strong>Express</strong></span>
+                <p>Order from local restaurants that are open right now.</p>
+            </div>
+            <div class="footer-meta">
+                <span>Open kitchens accept orders. Closed kitchens are shown, but cannot be ordered from.</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- =====================================================================
+         NON-BLOCKING TOAST NOTIFICATION STACK (Bottom-Right)
+         ===================================================================== -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <script src="app.js"></script>
 </body>
 </html>

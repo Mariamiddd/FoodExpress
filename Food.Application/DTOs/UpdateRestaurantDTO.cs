@@ -20,5 +20,7 @@ namespace Food.Application.DTOs
         public string Address { get; set; } = string.Empty;
 
         public string? ImagePath { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 }
