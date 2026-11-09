@@ -158,7 +158,7 @@
         <section id="homeDiscoveryView" class="view-section active-view">
 
             <!-- Editorial Hero & Filter Ribbon -->
-            <div class="discovery-banner hidden" aria-hidden="true">
+            <div class="discovery-banner">
                 <div class="discovery-banner-content">
                     <span class="eyebrow-tag">Neighborhood Dispatch</span>
                     <h1 class="editorial-title">Crafted plates from kitchens down the block.</h1>
@@ -195,7 +195,7 @@
                 </div>
             </section>
 
-            <!-- Global Dish Search Results Panel (Shown when user searches via GET /api/Menu/search) -->
+            <!-- Global Dish Search Results Panel -->
             <section class="dishes-showcase-section hidden" id="dishSearchResultsSection">
                 <div class="section-header-bar">
                     <div>
@@ -207,7 +207,7 @@
                 <div class="dishes-grid" id="dishSearchResultsGrid"></div>
             </section>
 
-            <!-- Explore Dishes by Category Section (GET /api/Menu/category/{categoryId}) -->
+            <!-- Explore Dishes by Category Section -->
             <section class="dishes-showcase-section hidden" id="categoryDishesSection">
                 <div class="section-header-bar">
                     <div>
@@ -219,7 +219,7 @@
                 <div class="dishes-grid" id="categoryDishesGrid"></div>
             </section>
 
-            <!-- Main Restaurant Feed with Search, Category Filter & Pagination (GET /api/Restaurants) -->
+            <!-- Main Restaurant Feed -->
             <section class="restaurants-feed-section">
                 <div class="feed-toolbar">
                     <div class="feed-toolbar-left">
@@ -256,9 +256,7 @@
                 </div>
 
                 <!-- Restaurant Cards Grid -->
-                <div class="restaurants-grid" id="restaurantsGrid">
-                    <!-- Populated dynamically via GET /api/Restaurants -->
-                </div>
+                <div class="restaurants-grid" id="restaurantsGrid"></div>
 
                 <!-- Pagination Bar -->
                 <div class="pagination-bar" id="restaurantsPaginationBar">
@@ -275,8 +273,6 @@
 
         <!-- ===================================================================
              VIEW 2: DEDICATED RESTAURANT STOREFRONT VIEW
-             (GET /api/Restaurants/{id}, GET /api/Restaurants/{id}/menu,
-              GET /api/Menu/search?q={term}&restaurantId={id})
              =================================================================== -->
         <section id="storefrontView" class="view-section hidden">
             <div class="storefront-top-nav">
@@ -296,9 +292,7 @@
 
             <!-- Storefront Cover Hero -->
             <div class="storefront-hero" id="storefrontHero">
-                <div class="storefront-hero-media" id="storefrontBannerWrap">
-                    <!-- Populated with restaurant image or earthy SVG illustration -->
-                </div>
+                <div class="storefront-hero-media" id="storefrontBannerWrap"></div>
                 <div class="storefront-hero-info">
                     <div class="storefront-badges">
                         <span class="status-pill open" id="storefrontStatusBadge">Open</span>
@@ -310,7 +304,6 @@
                 </div>
             </div>
 
-            <!-- Storefront Menu Controls: In-Restaurant Dish Search (GET /api/Menu/search?q=&restaurantId=) -->
             <div class="storefront-toolbar">
                 <div class="storefront-tabs">
                     <button type="button" class="tab-pill active" id="storefrontFullMenuTab">
@@ -328,15 +321,11 @@
                 </form>
             </div>
 
-            <!-- Storefront Dishes Grid -->
-            <div class="dishes-grid" id="storefrontMenuGrid">
-                <!-- Populated via GET /api/Restaurants/{id}/menu or GET /api/Menu/search?q=&restaurantId= -->
-            </div>
+            <div class="dishes-grid" id="storefrontMenuGrid"></div>
         </section>
 
         <!-- ===================================================================
              VIEW 3: CUSTOMER "MY ORDERS" TRACKING VIEW
-             (GET /api/Orders/my, GET /api/Orders/{id}, PATCH /api/Orders/{id}/status)
              =================================================================== -->
         <section id="myOrdersView" class="view-section hidden">
             <div class="section-header-bar">
@@ -352,25 +341,22 @@
                 </button>
             </div>
 
-            <div class="orders-list-grid" id="myOrdersGrid">
-                <!-- Populated dynamically via GET /api/Orders/my -->
-            </div>
+            <div class="orders-list-grid" id="myOrdersGrid"></div>
         </section>
 
         <!-- ===================================================================
-             VIEW 4: FRICTIONLESS ADMIN CONTROL CENTER (DROPDOWN-DRIVEN UX)
+             VIEW 4: ADMIN CONTROL CENTER
              =================================================================== -->
         <section id="adminDashboardView" class="view-section hidden">
             <div class="admin-header-banner">
                 <div>
                     <span class="eyebrow-tag">Operations &amp; Catalog Control</span>
-                    <h1 class="editorial-title-sm">Admin</h1>
+                    <h1 class="editorial-title-sm">Admin Control Center</h1>
                     <p class="section-sub-xs">
                         Update restaurants, dishes, and orders. Pause a restaurant when it should stop accepting orders.
                     </p>
                 </div>
                 <div class="admin-header-actions">
-                    <!-- Secondary Restaurant Creation Route Trigger (POST /api/Restaurants) -->
                     <button type="button" class="btn-secondary btn-sm" id="openQuickCreateRestaurantModalBtn">
                         + Add restaurant
                     </button>
@@ -380,7 +366,6 @@
                 </div>
             </div>
 
-            <!-- Admin Tab Bar -->
             <div class="admin-tabs-bar" role="tablist">
                 <button type="button" class="admin-tab-btn active" data-admin-tab="tabRestaurants">
                     1. Restaurant Management
@@ -396,15 +381,9 @@
                 </button>
             </div>
 
-            <!-- -----------------------------------------------------------------
-                 ADMIN TAB 1: RESTAURANT MANAGEMENT
-                 (GET /api/Restaurants, POST /api/Admin/restaurants,
-                  PUT /api/Admin/restaurants/{id}, DELETE /api/Admin/restaurants/{id},
-                  POST /api/Admin/restaurants/{id}/image)
-                 ----------------------------------------------------------------- -->
+            <!-- ADMIN TAB 1: RESTAURANT MANAGEMENT -->
             <div class="admin-tab-panel active-tab-panel" id="tabRestaurants">
                 <div class="admin-two-col">
-                    <!-- Left Card: Dropdown-Driven Edit, Image Upload & Delete -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <span class="badge-moss">Auto-Fill Editor</span>
@@ -419,7 +398,6 @@
                             </select>
                         </div>
 
-                        <!-- Auto-Filled Edit Form (PUT /api/Admin/restaurants/{id}) -->
                         <form id="adminEditRestaurantForm" class="admin-form-stack">
                             <input type="hidden" id="adminEditRestId" />
                             <input type="hidden" id="adminEditRestImagePath" />
@@ -455,7 +433,6 @@
 
                         <hr class="admin-divider" />
 
-                        <!-- Cover Image Upload Form (POST /api/Admin/restaurants/{id}/image) -->
                         <form id="adminRestImageForm" class="admin-form-stack">
                             <h4>Upload Cover Image</h4>
                             <div class="file-upload-row">
@@ -467,7 +444,6 @@
                         </form>
                     </div>
 
-                    <!-- Right Card: Create New Restaurant (POST /api/Admin/restaurants) -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <span class="badge-wheat">New Partner</span>
@@ -525,15 +501,9 @@
                 </div>
             </div>
 
-            <!-- -----------------------------------------------------------------
-                 ADMIN TAB 2: MENU ITEM MANAGEMENT (TWO-STEP SMART DROPDOWNS)
-                 (GET /api/Menu/restaurant/{restaurantId}, GET /api/Admin/categories,
-                  PUT /api/Admin/menuitems/{id}, DELETE /api/Admin/menuitems/{id},
-                  POST /api/Admin/menuitems/{id}/image, POST /api/Admin/menuitems)
-                 ----------------------------------------------------------------- -->
+            <!-- ADMIN TAB 2: MENU ITEM MANAGEMENT -->
             <div class="admin-tab-panel hidden" id="tabMenuItems">
                 <div class="admin-two-col">
-                    <!-- Left Card: Two-Step Smart Dropdown Dish Editor -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <span class="badge-moss">2-Step Smart Selector</span>
@@ -557,7 +527,6 @@
                             </div>
                         </div>
 
-                        <!-- Auto-Filled Dish Update Form (PUT /api/Admin/menuitems/{id}) -->
                         <form id="adminEditMenuItemForm" class="admin-form-stack">
                             <input type="hidden" id="adminEditDishId" />
                             <input type="hidden" id="adminEditDishRestaurantId" />
@@ -603,7 +572,6 @@
 
                         <hr class="admin-divider" />
 
-                        <!-- Upload Dish Photo Form (POST /api/Admin/menuitems/{id}/image) -->
                         <form id="adminDishImageForm" class="admin-form-stack">
                             <h4>Upload Dish Photo</h4>
                             <div class="file-upload-row">
@@ -615,7 +583,6 @@
                         </form>
                     </div>
 
-                    <!-- Right Card: Create New Dish (POST /api/Admin/menuitems) -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <span class="badge-wheat">Catalog Addition</span>
@@ -671,18 +638,13 @@
                 </div>
             </div>
 
-            <!-- -----------------------------------------------------------------
-                 ADMIN TAB 3: CATEGORY & USER ROLE MANAGEMENT
-                 (GET /api/Admin/categories, POST /api/Admin/categories,
-                  POST /api/Admin/users/promote?email=...)
-                 ----------------------------------------------------------------- -->
+            <!-- ADMIN TAB 3: CATEGORIES & USER ROLE PROMOTION -->
             <div class="admin-tab-panel hidden" id="tabCategoriesUsers">
                 <div class="admin-two-col">
-                    <!-- Left Card: Categories Manager -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <span class="badge-moss">Taxonomy</span>
-                            <h3>Menu Categories ( &amp; )</h3>
+                            <h3>Menu Categories</h3>
                             <p>Create culinary categories and immediately sync all dropdowns &amp; discovery pills.</p>
                         </div>
 
@@ -697,12 +659,9 @@
                             <button type="submit" class="btn-primary">Add Category</button>
                         </form>
 
-                        <div class="admin-categories-list" id="adminCategoriesList">
-                            <!-- Populated via GET /api/Admin/categories -->
-                        </div>
+                        <div class="admin-categories-list" id="adminCategoriesList"></div>
                     </div>
 
-                    <!-- Right Card: Promote User to Admin -->
                     <div class="admin-card">
                         <div class="admin-card-header">
                             <span class="badge-wheat">Access Control</span>
@@ -727,10 +686,7 @@
                 </div>
             </div>
 
-            <!-- -----------------------------------------------------------------
-                 ADMIN TAB 4: LIVE ORDER OPERATIONS BOARD
-                 (GET /api/Orders, PATCH /api/Orders/{id}/status, GET /api/Orders/{id})
-                 ----------------------------------------------------------------- -->
+            <!-- ADMIN TAB 4: LIVE ORDER OPERATIONS BOARD -->
             <div class="admin-tab-panel hidden" id="tabOrdersBoard">
                 <div class="admin-orders-toolbar">
                     <div class="status-filter-pills" id="adminOrderStatusFilterBar">
@@ -747,18 +703,12 @@
                     </button>
                 </div>
 
-                <div class="admin-orders-grid" id="adminOrdersBoard">
-                    <!-- Populated dynamically via GET /api/Orders -->
-                </div>
+                <div class="admin-orders-grid" id="adminOrdersBoard"></div>
             </div>
         </section>
     </main>
 
-    <!-- =====================================================================
-         SLIDE-OVER DRAWER 1: SHOPPING CART & CHECKOUT
-         (GET /api/Cart, POST /api/Cart/items, PUT /api/Cart/items/{menuItemId},
-          DELETE /api/Cart/items/{menuItemId}, POST /api/Orders)
-         ===================================================================== -->
+    <!-- SLIDE-OVER DRAWER 1: SHOPPING CART & CHECKOUT -->
     <div class="drawer-backdrop hidden" id="cartDrawerBackdrop"></div>
     <aside class="slide-drawer hidden" id="cartDrawer" aria-label="Shopping Cart">
         <div class="drawer-header">
@@ -769,20 +719,14 @@
             <button type="button" class="btn-close-circle" id="closeCartDrawerBtn" aria-label="Close Cart">&times;</button>
         </div>
 
-        <!-- Active Cart Restaurant Banner -->
         <div class="cart-kitchen-banner hidden" id="cartRestaurantBanner">
             <span>Ordering from: <strong id="cartRestaurantNameLabel">—</strong></span>
             <span class="badge-wheat" id="cartRestaurantIdLabel"></span>
         </div>
 
-        <!-- Cart Items Scrollable Area -->
-        <div class="drawer-body" id="cartItemsList">
-            <!-- Populated via GET /api/Cart -->
-        </div>
+        <div class="drawer-body" id="cartItemsList"></div>
 
-        <!-- Checkout Footer -->
         <div class="drawer-footer" id="cartDrawerFooter">
-            <!-- Delivery Address Selector (Populated via GET /api/Addresses/my) -->
             <div class="checkout-address-box">
                 <div class="checkout-address-header">
                     <label for="checkoutAddressSelect">Delivery Address</label>
@@ -792,7 +736,6 @@
                     <option value="">Select delivery address...</option>
                 </select>
 
-                <!-- Inline Quick Address Form inside Checkout (POST /api/Addresses) -->
                 <form id="cartAddAddressForm" class="quick-address-form hidden">
                     <input type="text"
                            id="cartStreetInput"
@@ -827,10 +770,7 @@
         </div>
     </aside>
 
-    <!-- =====================================================================
-         SLIDE-OVER DRAWER 2: RESTAURANT CARD "PREVIEW DISHES" DRAWER
-         (Explicitly wired to GET /api/Menu/restaurant/{restaurantId})
-         ===================================================================== -->
+    <!-- SLIDE-OVER DRAWER 2: PREVIEW DISHES DRAWER -->
     <div class="drawer-backdrop hidden" id="previewDishesBackdrop"></div>
     <aside class="slide-drawer hidden" id="previewDishesDrawer" aria-label="Kitchen Menu Preview">
         <div class="drawer-header">
@@ -848,9 +788,7 @@
         </div>
     </aside>
 
-    <!-- =====================================================================
-         MODAL 1: DISH QUICK-VIEW / DETAIL MODAL (GET /api/Menu/{id})
-         ===================================================================== -->
+    <!-- MODAL 1: DISH QUICK-VIEW -->
     <div class="modal-backdrop hidden" id="dishDetailModal">
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="dishModalName">
             <button type="button" class="btn-close-circle modal-close-floating" id="closeDishModalBtn" aria-label="Close">&times;</button>
@@ -883,10 +821,7 @@
         </div>
     </div>
 
-    <!-- =====================================================================
-         MODAL 2: AUTHENTICATION (LOGIN / REGISTER)
-         (POST /api/Auth/Login, POST /api/Auth/Register)
-         ===================================================================== -->
+    <!-- MODAL 2: AUTHENTICATION -->
     <div class="modal-backdrop hidden" id="authModal">
         <div class="modal-card modal-sm" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
             <div class="modal-header">
@@ -903,7 +838,6 @@
             </div>
 
             <div class="modal-body">
-                <!-- Login Form (POST /api/Auth/Login) -->
                 <form id="loginForm" class="admin-form-stack">
                     <div class="form-group">
                         <label for="loginEmail">Email Address</label>
@@ -916,7 +850,6 @@
                     <button type="submit" class="btn-primary btn-block">Sign In</button>
                 </form>
 
-                <!-- Register Form (POST /api/Auth/Register) -->
                 <form id="registerForm" class="admin-form-stack hidden">
                     <div class="form-group">
                         <label for="regUserName">Username (3–50 characters)</label>
@@ -948,11 +881,7 @@
         </div>
     </div>
 
-    <!-- =====================================================================
-         MODAL 3: USER PROFILE & SAVED ADDRESSES MANAGER
-         (GET /api/Users/profile, POST /api/Users/profile-image,
-          GET /api/Addresses/my, POST /api/Addresses, DELETE /api/Addresses/{id})
-         ===================================================================== -->
+    <!-- MODAL 3: PROFILE & ADDRESSES -->
     <div class="modal-backdrop hidden" id="profileModal">
         <div class="modal-card modal-lg" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
             <div class="modal-header">
@@ -964,12 +893,9 @@
             </div>
 
             <div class="modal-body profile-modal-grid">
-                <!-- Left Column: Profile Info & Avatar Upload -->
                 <div class="profile-info-col">
                     <div class="profile-avatar-card">
-                        <div class="profile-avatar-frame" id="profileAvatarFrame">
-                            <!-- Populated with user image or SVG avatar -->
-                        </div>
+                        <div class="profile-avatar-frame" id="profileAvatarFrame"></div>
                         <div class="profile-identity">
                             <h3 id="profileNameDisplay">—</h3>
                             <p id="profileEmailDisplay" class="muted-helper">—</p>
@@ -993,12 +919,9 @@
                     </button>
                 </div>
 
-                <!-- Right Column: Saved Addresses (GET / POST / DELETE /api/Addresses) -->
                 <div class="profile-addresses-col">
                     <h4>Saved Delivery Addresses</h4>
-                    <div class="saved-addresses-list" id="savedAddressesList">
-                        <!-- Populated dynamically -->
-                    </div>
+                    <div class="saved-addresses-list" id="savedAddressesList"></div>
 
                     <form id="profileAddAddressForm" class="admin-form-stack address-add-card">
                         <h5>Add New Address</h5>
@@ -1029,9 +952,7 @@
         </div>
     </div>
 
-    <!-- =====================================================================
-         MODAL 4: ORDER RECEIPT & LIVE TRACKER MODAL (GET /api/Orders/{id})
-         ===================================================================== -->
+    <!-- MODAL 4: ORDER RECEIPT & LIVE TRACKER -->
     <div class="modal-backdrop hidden" id="orderDetailModal">
         <div class="modal-card modal-lg" role="dialog" aria-modal="true" aria-labelledby="orderModalTitle">
             <div class="modal-header">
@@ -1041,17 +962,11 @@
                 </div>
                 <button type="button" class="btn-close-circle" id="closeOrderDetailModalBtn" aria-label="Close">&times;</button>
             </div>
-
-            <div class="modal-body" id="orderDetailModalBody">
-                <!-- Populated dynamically via GET /api/Orders/{id} -->
-            </div>
+            <div class="modal-body" id="orderDetailModalBody"></div>
         </div>
     </div>
 
-    <!-- =====================================================================
-         MODAL 5: CART RESTAURANT CONFLICT PROMPT
-         (Enforces single-restaurant cart rule cleanly)
-         ===================================================================== -->
+    <!-- MODAL 5: CART RESTAURANT CONFLICT PROMPT -->
     <div class="modal-backdrop hidden" id="cartConflictModal">
         <div class="modal-card modal-sm" role="dialog" aria-modal="true">
             <div class="modal-header">
@@ -1075,10 +990,7 @@
         </div>
     </div>
 
-    <!-- =====================================================================
-         MODAL 6: STOREFRONT QUICK-ADD DISH MODAL FOR ADMINS
-         (Explicitly wired to POST /api/Restaurants/{id}/menu)
-         ===================================================================== -->
+    <!-- MODAL 6: STOREFRONT QUICK-ADD DISH MODAL FOR ADMINS -->
     <div class="modal-backdrop hidden" id="storefrontAddDishModal">
         <div class="modal-card modal-sm" role="dialog" aria-modal="true">
             <div class="modal-header">
@@ -1116,10 +1028,7 @@
         </div>
     </div>
 
-    <!-- =====================================================================
-         MODAL 7: QUICK CREATE RESTAURANT MODAL FOR ADMINS
-         (Explicitly wired to POST /api/Restaurants)
-         ===================================================================== -->
+    <!-- MODAL 7: QUICK CREATE RESTAURANT MODAL FOR ADMINS -->
     <div class="modal-backdrop hidden" id="quickCreateRestaurantModal">
         <div class="modal-card modal-sm" role="dialog" aria-modal="true">
             <div class="modal-header">
@@ -1147,9 +1056,6 @@
         </div>
     </div>
 
-    <!-- =====================================================================
-         FOOTER
-         ===================================================================== -->
     <footer class="site-footer">
         <div class="container footer-inner">
             <div class="footer-brand">
@@ -1162,9 +1068,6 @@
         </div>
     </footer>
 
-    <!-- =====================================================================
-         NON-BLOCKING TOAST NOTIFICATION STACK (Bottom-Right)
-         ===================================================================== -->
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
     <script src="app.js"></script>

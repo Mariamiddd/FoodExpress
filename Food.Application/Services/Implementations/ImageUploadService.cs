@@ -1,10 +1,11 @@
+using Food.Application.Services.Interfaces;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Food.Application.Services.Implementations
 {
-    public class ImageUploadService
+    public class ImageUploadService : IImageUploadService
     {
         private readonly string _uploadPath;
         private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
@@ -20,53 +21,43 @@ namespace Food.Application.Services.Implementations
             }
         }
 
-        /// <summary>
-        /// Validates an image file
-        /// </summary>
         public ValidationResult ValidateImage(Stream fileStream, string fileName, string mimeType)
         {
-            // Check file size
             if (fileStream.Length > MaxFileSize)
             {
-                return new ValidationResult 
-                { 
-                    IsValid = false, 
-                    Message = $"File size exceeds maximum allowed size of {MaxFileSize / (1024 * 1024)} MB" 
+                return new ValidationResult
+                {
+                    IsValid = false,
+                    Message = $"File size exceeds maximum allowed size of {MaxFileSize / (1024 * 1024)} MB"
                 };
             }
 
-            // Check file extension
-            var extension = Path.GetExtension(fileName).ToLower();
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
             if (!Array.Exists(_allowedExtensions, e => e == extension))
             {
-                return new ValidationResult 
-                { 
-                    IsValid = false, 
-                    Message = $"File type '{extension}' is not allowed. Allowed types: {string.Join(", ", _allowedExtensions)}" 
+                return new ValidationResult
+                {
+                    IsValid = false,
+                    Message = $"File type '{extension}' is not allowed. Allowed types: {string.Join(", ", _allowedExtensions)}"
                 };
             }
 
-            // Check MIME type
-            if (!Array.Exists(_allowedMimeTypes, m => m == mimeType))
+            if (!Array.Exists(_allowedMimeTypes, m => m == mimeType.ToLowerInvariant()))
             {
-                return new ValidationResult 
-                { 
-                    IsValid = false, 
-                    Message = $"MIME type '{mimeType}' is not allowed" 
+                return new ValidationResult
+                {
+                    IsValid = false,
+                    Message = $"MIME type '{mimeType}' is not allowed"
                 };
             }
 
             return new ValidationResult { IsValid = true, Message = "File is valid" };
         }
 
-        /// <summary>
-        /// Saves an image file and returns the relative path
-        /// </summary>
         public async Task<string> SaveImageAsync(Stream fileStream, string fileName, string subFolder)
         {
             try
             {
-                // Create unique filename to avoid conflicts
                 var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(fileName)}";
                 var subFolderPath = Path.Combine(_uploadPath, subFolder);
 
@@ -82,8 +73,8 @@ namespace Food.Application.Services.Implementations
                     await fileStream.CopyToAsync(stream);
                 }
 
-                // Return relative path for storage in database
-                return Path.Combine(subFolder, uniqueFileName).Replace("\\", "/");
+                // Return web-accessible relative URL under wwwroot/uploads
+                return $"/uploads/{subFolder}/{uniqueFileName}";
             }
             catch (Exception ex)
             {
@@ -91,17 +82,21 @@ namespace Food.Application.Services.Implementations
             }
         }
 
-        /// <summary>
-        /// Deletes an image file
-        /// </summary>
         public void DeleteImage(string relativePath)
         {
-            if (string.IsNullOrEmpty(relativePath))
+            if (string.IsNullOrWhiteSpace(relativePath))
                 return;
 
             try
             {
-                var fullPath = Path.Combine(_uploadPath, relativePath);
+                var cleanPath = relativePath.TrimStart('/', '\\');
+                if (cleanPath.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase) ||
+                    cleanPath.StartsWith("uploads\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    cleanPath = cleanPath.Substring("uploads/".Length);
+                }
+
+                var fullPath = Path.Combine(_uploadPath, cleanPath);
                 if (File.Exists(fullPath))
                 {
                     File.Delete(fullPath);
@@ -109,15 +104,8 @@ namespace Food.Application.Services.Implementations
             }
             catch (Exception ex)
             {
-                // Log but don't throw - deletion failure shouldn't break the operation
                 Console.WriteLine($"Warning: Failed to delete image {relativePath}: {ex.Message}");
             }
         }
-    }
-
-    public class ValidationResult
-    {
-        public bool IsValid { get; set; }
-        public string Message { get; set; }
     }
 }

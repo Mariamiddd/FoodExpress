@@ -22,6 +22,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Food.Web
@@ -36,6 +37,7 @@ namespace Food.Web
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 })
                 .ConfigureApiBehaviorOptions(options =>
                 {
@@ -78,8 +80,9 @@ namespace Food.Web
             builder.Services.AddScoped<IMenuService, MenuService>();
             builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 
+
             // ImageUploadService via Dependency Injection
-            builder.Services.AddScoped<ImageUploadService>(sp =>
+            builder.Services.AddScoped<IImageUploadService>(sp =>
             {
                 var env = sp.GetRequiredService<IWebHostEnvironment>();
                 var webRoot = env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");

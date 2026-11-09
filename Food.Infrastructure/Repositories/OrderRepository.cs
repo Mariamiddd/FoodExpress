@@ -2,9 +2,9 @@ using Food.Domain.Interfaces;
 using Food.Domain.Models.Entities;
 using Food.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Food.Infrastructure.Repositories
 {
@@ -20,6 +20,7 @@ namespace Food.Infrastructure.Repositories
         public async Task<Order?> GetOrderByIdAsync(int orderId)
         {
             return await _context.Orders
+                .Include(o => o.User)
                 .Include(o => o.Restaurant)
                 .Include(o => o.Address)
                 .Include(o => o.OrderItems)
@@ -31,6 +32,7 @@ namespace Food.Infrastructure.Repositories
         {
             return await _context.Orders
                 .AsNoTracking()
+                .Include(o => o.User)
                 .Include(o => o.Restaurant)
                 .Include(o => o.Address)
                 .Include(o => o.OrderItems)
@@ -43,6 +45,7 @@ namespace Food.Infrastructure.Repositories
         {
             return await _context.Orders
                 .AsNoTracking()
+                .Include(o => o.User)
                 .Include(o => o.Restaurant)
                 .Include(o => o.Address)
                 .Include(o => o.OrderItems)

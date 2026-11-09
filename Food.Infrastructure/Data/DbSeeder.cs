@@ -27,7 +27,6 @@ namespace Food.Infrastructure.Data
             try
             {
                 await dbContext.Database.MigrateAsync();
-                await EnsureRestaurantIsActiveColumnAsync(dbContext);
 
                 // 1. Seed Roles
                 await SeedRolesAsync(roleManager);
@@ -50,14 +49,6 @@ namespace Food.Infrastructure.Data
             {
                 logger.LogError(ex, "An error occurred while seeding the database.");
             }
-        }
-
-        private static async Task EnsureRestaurantIsActiveColumnAsync(FoodDbContext dbContext)
-        {
-            await dbContext.Database.ExecuteSqlRawAsync("""
-                IF COL_LENGTH('Restaurants', 'IsActive') IS NULL
-                    ALTER TABLE Restaurants ADD IsActive bit NOT NULL CONSTRAINT DF_Restaurants_IsActive DEFAULT 1;
-                """);
         }
 
         private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
@@ -114,46 +105,21 @@ namespace Food.Infrastructure.Data
 
             if (!string.IsNullOrEmpty(adminUser.Id))
             {
-                await EnsureUserCartAndAddressAsync(dbContext, adminUser.Id, "1 Freedom Square", "Tbilisi");
+                await EnsureUserCartAsync(dbContext, adminUser.Id);
             }
         }
 
-        private static async Task EnsureUserCartAndAddressAsync(
-            FoodDbContext dbContext,
-            string userId,
-            string street,
-            string city)
+        private static async Task EnsureUserCartAsync(FoodDbContext dbContext, string userId)
         {
-            var hasChanges = false;
-
             if (!await dbContext.Carts.AnyAsync(c => c.UserId == userId))
             {
                 dbContext.Carts.Add(new Cart { UserId = userId });
-                hasChanges = true;
-            }
-
-            if (!await dbContext.Addresses.AnyAsync(a => a.UserId == userId))
-            {
-                dbContext.Addresses.Add(new Address
-                {
-                    UserId = userId,
-                    Street = street,
-                    City = city
-                });
-                hasChanges = true;
-            }
-
-            if (hasChanges)
-            {
                 await dbContext.SaveChangesAsync();
             }
         }
 
-        
-
         private static async Task SeedRestaurantsAndMenuAsync(FoodDbContext dbContext)
         {
-            // Fast exit: if restaurants already exist in the database, skip catalog seeding
             if (await dbContext.Restaurants.AnyAsync())
             {
                 return;
@@ -178,20 +144,17 @@ namespace Food.Infrastructure.Data
 
             var menuItems = new List<MenuItem>
             {
-                // Burger Palace
                 new() { RestaurantId = burgerPalace.Id, CategoryId = burgersCat.Id, Name = "Classic Burger", Price = 8.99m, IsAvailable = true },
                 new() { RestaurantId = burgerPalace.Id, CategoryId = burgersCat.Id, Name = "Double Cheeseburger", Price = 10.99m, IsAvailable = true },
                 new() { RestaurantId = burgerPalace.Id, CategoryId = burgersCat.Id, Name = "Bacon Burger", Price = 9.99m, IsAvailable = true },
                 new() { RestaurantId = burgerPalace.Id, CategoryId = drinksCat.Id, Name = "Soda", Price = 2.99m, IsAvailable = true },
                 new() { RestaurantId = burgerPalace.Id, CategoryId = drinksCat.Id, Name = "Iced Tea", Price = 2.49m, IsAvailable = true },
 
-                // Pizza Palace
                 new() { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCat.Id, Name = "Margherita Pizza", Price = 12.99m, IsAvailable = true },
                 new() { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCat.Id, Name = "Pepperoni Pizza", Price = 13.99m, IsAvailable = true },
                 new() { RestaurantId = pizzaPalace.Id, CategoryId = pizzaCat.Id, Name = "Vegetarian Pizza", Price = 11.99m, IsAvailable = true },
                 new() { RestaurantId = pizzaPalace.Id, CategoryId = dessertsCat.Id, Name = "Tiramisu", Price = 6.99m, IsAvailable = true },
 
-                // Pasta House
                 new() { RestaurantId = pastaHouse.Id, CategoryId = pastaCat.Id, Name = "Spaghetti Carbonara", Price = 11.99m, IsAvailable = true },
                 new() { RestaurantId = pastaHouse.Id, CategoryId = pastaCat.Id, Name = "Fettuccine Alfredo", Price = 11.99m, IsAvailable = true },
                 new() { RestaurantId = pastaHouse.Id, CategoryId = pastaCat.Id, Name = "Lasagna", Price = 12.99m, IsAvailable = true },

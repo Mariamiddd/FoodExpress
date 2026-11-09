@@ -7,8 +7,6 @@ namespace Food.Application.DTOs
 {
     public class UpdateRestaurantDTO
     {
-        [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "Valid Restaurant ID is required")]
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Restaurant name is required")]

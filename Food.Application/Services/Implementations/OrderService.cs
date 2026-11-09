@@ -57,8 +57,11 @@ namespace Food.Application.Services.Implementations
             var cart = await _unitOfWork.Carts.GetCartByUserIdAsync(userId);
             BusinessRulesValidator.ValidateCartForCheckout(cart);
 
-            var restaurantId = cart!.CartItems.First().MenuItem.RestaurantId;
-            var restaurant = cart.CartItems.First().MenuItem.Restaurant;
+            var firstMenuItem = cart!.CartItems.First().MenuItem
+                ?? throw new InvalidOperationException(ErrorMessages.MenuItemNotFoundOrUnavailable);
+
+            var restaurantId = firstMenuItem.RestaurantId;
+            var restaurant = firstMenuItem.Restaurant;
             if (restaurant == null && _unitOfWork.Restaurants != null)
             {
                 restaurant = await _unitOfWork.Restaurants.GetByIdAsync(restaurantId);
@@ -81,8 +84,11 @@ namespace Food.Application.Services.Implementations
             decimal total = 0m;
             foreach (var cartItem in cart.CartItems)
             {
+                BusinessRulesValidator.ValidateQuantity(cartItem.Quantity);
+                BusinessRulesValidator.ValidateMenuItemAvailability(cartItem.MenuItem);
+
                 // Server-side pricing computation using current database price
-                var unitPrice = cartItem.MenuItem.Price;
+                var unitPrice = cartItem.MenuItem!.Price;
                 var orderItem = new OrderItem
                 {
                     MenuItemId = cartItem.MenuItemId,
@@ -91,6 +97,7 @@ namespace Food.Application.Services.Implementations
                     PriceAtTimeOfOrder = unitPrice,
                     Name = cartItem.MenuItem.Name
                 };
+
                 order.OrderItems.Add(orderItem);
                 total += unitPrice * cartItem.Quantity;
             }

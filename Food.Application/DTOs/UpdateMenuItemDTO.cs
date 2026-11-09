@@ -6,8 +6,6 @@ namespace Food.Application.DTOs
 {
     public class UpdateMenuItemDTO
     {
-        [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "Valid Menu Item ID is required")]
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Menu item name is required")]

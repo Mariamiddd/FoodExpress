@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 using Food.Domain.Models.Identity;
-using Food.Domain.Models.Entities;  
 
 namespace Food.Domain.Models.Entities
 {
@@ -23,7 +21,6 @@ namespace Food.Domain.Models.Entities
             if (menuItem == null || !menuItem.IsAvailable)
                 throw new InvalidOperationException("Menu item not found or unavailable.");
 
-            // Single Restaurant Rule: Check if cart already contains items from a different restaurant
             var existingRestaurantId = CartItems
                 .Where(ci => ci.MenuItem != null)
                 .Select(ci => ci.MenuItem.RestaurantId)
@@ -55,12 +52,13 @@ namespace Food.Domain.Models.Entities
             RecalculateTotal();
         }
 
-        public void UpdateItemQuantity(int menuItemId, int quantity)
+        public void UpdateItemQuantity(int itemOrMenuItemId, int quantity)
         {
             if (quantity <= 0)
                 throw new ArgumentException("Quantity must be greater than 0.");
 
-            var item = CartItems.FirstOrDefault(i => i.MenuItemId == menuItemId)
+            var item = CartItems.FirstOrDefault(i => i.MenuItemId == itemOrMenuItemId)
+                ?? CartItems.FirstOrDefault(i => i.Id == itemOrMenuItemId)
                 ?? throw new KeyNotFoundException("Cart item not found.");
 
             item.Quantity = quantity;
@@ -72,9 +70,10 @@ namespace Food.Domain.Models.Entities
             RecalculateTotal();
         }
 
-        public void RemoveItem(int menuItemId)
+        public void RemoveItem(int itemOrMenuItemId)
         {
-            var itemToRemove = CartItems.FirstOrDefault(i => i.MenuItemId == menuItemId)
+            var itemToRemove = CartItems.FirstOrDefault(i => i.MenuItemId == itemOrMenuItemId)
+                ?? CartItems.FirstOrDefault(i => i.Id == itemOrMenuItemId)
                 ?? throw new KeyNotFoundException("Cart item not found.");
 
             CartItems.Remove(itemToRemove);

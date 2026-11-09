@@ -1,9 +1,10 @@
 ﻿using Food.Application.DTOs;
 using Food.Application.Interfaces;
-using Food.Application.Services.Implementations;
 using Food.Web.Repsonses;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Food.Web.Controllers
 {
@@ -25,7 +26,7 @@ namespace Food.Web.Controllers
         }
 
         /// <summary>
-        /// Registers a new customer account, initializes their cart and default address, and returns a JWT token.
+        /// Registers a new customer account, initializes their shopping cart, and returns a JWT token.
         /// </summary>
         /// <param name="dto">User registration credentials (username, email, password).</param>
         /// <param name="cancellationToken">Cancellation token.</param>

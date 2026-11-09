@@ -5,9 +5,6 @@ using Food.Domain.Interfaces;
 using Food.Domain.Models.Entities;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace Food.Tests
 {

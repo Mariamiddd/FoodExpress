@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 
 namespace Food.Application.DTOs
 {
@@ -9,6 +8,8 @@ namespace Food.Application.DTOs
     {
         public int Id { get; set; }
         public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string UserEmail { get; set; } = string.Empty;
         public int RestaurantId { get; set; }
         public string RestaurantName { get; set; } = string.Empty;
         public int AddressId { get; set; }

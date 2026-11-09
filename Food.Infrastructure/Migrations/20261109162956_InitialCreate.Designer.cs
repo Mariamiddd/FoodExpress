@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Food.Infrastructure.Migrations
 {
     [DbContext(typeof(FoodDbContext))]
-    [Migration("20261107162212_InitialCreate")]
+    [Migration("20261109162956_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

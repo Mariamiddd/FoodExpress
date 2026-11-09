@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace Food.Infrastructure.Repositories
 {
@@ -67,11 +67,36 @@ namespace Food.Infrastructure.Repositories
 
         public async Task DeleteAsync(int id)
         {
-            var restaurant = await _context.Restaurants.FindAsync(id);
-            if (restaurant != null)
+            var restaurant = await _context.Restaurants
+                .Include(r => r.MenuItems)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (restaurant == null)
+                return;
+
+            var hasOrders = await _context.Orders.AnyAsync(o => o.RestaurantId == id) ||
+                            await _context.OrderItems.AnyAsync(oi => oi.MenuItem.RestaurantId == id);
+
+            if (hasOrders)
             {
-                _context.Restaurants.Remove(restaurant);
+                throw new InvalidOperationException(
+                    "Cannot delete this restaurant because it has existing customer orders. Mark it as Closed (Inactive) instead.");
             }
+
+            var menuItemIds = restaurant.MenuItems.Select(m => m.Id).ToList();
+            if (menuItemIds.Count > 0)
+            {
+                var cartItems = await _context.CartItems
+                    .Where(ci => menuItemIds.Contains(ci.MenuItemId))
+                    .ToListAsync();
+
+                if (cartItems.Count > 0)
+                {
+                    _context.CartItems.RemoveRange(cartItems);
+                }
+            }
+
+            _context.Restaurants.Remove(restaurant);
         }
     }
 }

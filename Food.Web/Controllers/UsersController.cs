@@ -1,5 +1,5 @@
 using Food.Application.Interfaces;
-using Food.Application.Services.Implementations;
+using Food.Application.Services.Interfaces;
 using Food.Web.Repsonses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,9 +20,9 @@ namespace Food.Web.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUsersService _usersService;
-        private readonly ImageUploadService _imageUploadService;
+        private readonly IImageUploadService _imageUploadService;
 
-        public UsersController(IUsersService usersService, ImageUploadService imageUploadService)
+        public UsersController(IUsersService usersService, IImageUploadService imageUploadService)
         {
             _usersService = usersService;
             _imageUploadService = imageUploadService;

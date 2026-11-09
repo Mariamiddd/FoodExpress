@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Food.Application.Services.Implementations
 {
@@ -34,6 +36,7 @@ namespace Food.Application.Services.Implementations
             _logger = logger;
         }
 
+        [System.Diagnostics.DebuggerHidden]
         public async Task<AuthResponseDTO> RegisterUserAsync(RegisterDTO dto, CancellationToken cancellationToken = default)
         {
             var existingEmail = await _userManager.FindByEmailAsync(dto.Email);
@@ -42,11 +45,12 @@ namespace Food.Application.Services.Implementations
                 throw new InvalidOperationException(ErrorMessages.EmailAlreadyInUse);
             }
 
+            // Automatically handle usernames with spaces or special characters
             var cleanUserName = string.IsNullOrWhiteSpace(dto.UserName) ? dto.Email : dto.UserName.Trim();
             var existingUserName = await _userManager.FindByNameAsync(cleanUserName);
             if (existingUserName != null)
             {
-                throw new InvalidOperationException(ErrorMessages.UsernameAlreadyInUse);
+                cleanUserName = $"{cleanUserName}_{Guid.NewGuid().ToString().Substring(0, 4)}";
             }
 
             var user = new ApplicationUser
@@ -71,13 +75,7 @@ namespace Food.Application.Services.Implementations
             var cart = new Cart { UserId = user.Id };
             await _unitOfWork.Carts.AddAsync(cart);
 
-            var defaultAddress = new Address
-            {
-                UserId = user.Id,
-                Street = "123 Rustaveli Avenue",
-                City = "Tbilisi"
-            };
-            await _unitOfWork.Addresses.AddAsync(defaultAddress);
+            
 
             await _unitOfWork.SaveAsync();
 
@@ -98,6 +96,7 @@ namespace Food.Application.Services.Implementations
                 Email = user.Email,
                 UserName = user.UserName,
                 ProfileImagePath = user.ProfileImagePath,
+                ImagePath = user.ProfileImagePath,
                 Roles = roles
             };
         }

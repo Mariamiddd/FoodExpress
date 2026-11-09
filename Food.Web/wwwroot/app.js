@@ -200,7 +200,6 @@ function showToast(message, type = "success") {
 function extractApiErrorMessage(payload, status) {
     if (!payload) return `Request failed with HTTP status ${status}.`;
 
-    // Validation errors dictionary: { errors: { field: ["msg1", "msg2"] } }
     if (payload.errors && typeof payload.errors === "object") {
         const messages = [];
         for (const [field, arr] of Object.entries(payload.errors)) {
@@ -213,12 +212,10 @@ function extractApiErrorMessage(payload, status) {
         if (messages.length > 0) return messages.join(" | ");
     }
 
-    // Standard wrapper message
     if (payload.message && typeof payload.message === "string") {
         return payload.message;
     }
 
-    // ASP.NET ProblemDetails
     if (payload.detail && typeof payload.detail === "string") {
         return payload.detail;
     }
@@ -229,11 +226,6 @@ function extractApiErrorMessage(payload, status) {
     return `Server returned HTTP ${status}.`;
 }
 
-/**
- * Central API Fetch Helper
- * Automatically attaches Bearer token, supports FormData without Content-Type override,
- * unwraps `{ success, message, data, errors }`, and triggers Toast notifications on errors.
- */
 async function apiFetch(endpoint, options = {}) {
     const {
         method = "GET",
@@ -252,7 +244,6 @@ async function apiFetch(endpoint, options = {}) {
     let fetchBody = body;
     if (body !== undefined && body !== null) {
         if (isFormData || body instanceof FormData) {
-            // CRITICAL: Do NOT set Content-Type when sending FormData; browser sets boundary automatically
             delete headers["Content-Type"];
             fetchBody = body;
         } else if (typeof body === "object") {
@@ -352,9 +343,6 @@ function isUserAdmin() {
 
 /* ============================================================================
    6. AUTHENTICATION & SESSION MANAGEMENT
-   Endpoints:
-   (1) POST /api/Auth/Register
-   (2) POST /api/Auth/Login
    ============================================================================ */
 function loadSessionFromStorage() {
     try {
@@ -396,7 +384,7 @@ function saveSessionToStorage(authData) {
         email: authData.email ?? "",
         roles,
         expiresAt: authData.expiresAt ?? null,
-        profileImage: authData.imagePath ?? authData.profileImageUrl ?? state.auth.profileImage ?? null
+        profileImage: authData.profileImagePath ?? authData.imagePath ?? authData.profileImageUrl ?? state.auth.profileImage ?? null
     };
 
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state.auth));
@@ -448,7 +436,6 @@ function syncAuthUI() {
     }
 }
 
-// Endpoint 1: POST /api/Auth/Register
 async function handleRegisterSubmit(e) {
     e.preventDefault();
     const userName = document.getElementById("regUserName").value.trim();
@@ -473,7 +460,6 @@ async function handleRegisterSubmit(e) {
     }
 }
 
-// Endpoint 2: POST /api/Auth/Login
 async function handleLoginSubmit(e) {
     e.preventDefault();
     const email = document.getElementById("loginEmail").value.trim();
@@ -508,15 +494,7 @@ async function initializeAuthenticatedUserState() {
 
 /* ============================================================================
    7. USER PROFILE & SAVED ADDRESSES
-   Endpoints:
-   (3) GET /api/Users/profile
-   (4) POST /api/Users/profile-image
-   (5) GET /api/Addresses/my
-   (6) POST /api/Addresses
-   (7) DELETE /api/Addresses/{id}
    ============================================================================ */
-
-// Endpoint 3: GET /api/Users/profile
 async function fetchUserProfile() {
     if (!isUserAuthenticated()) return null;
     const profile = await apiFetch("/api/Users/profile", { silentError: true });
@@ -528,7 +506,7 @@ async function fetchUserProfile() {
         state.auth.roles = profile.roles;
     }
     state.auth.profileImage =
-        profile.imagePath ?? profile.profileImageUrl ?? profile.avatarUrl ?? state.auth.profileImage;
+        profile.profileImagePath ?? profile.imagePath ?? profile.profileImageUrl ?? profile.avatarUrl ?? state.auth.profileImage;
 
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state.auth));
     syncAuthUI();
@@ -539,7 +517,7 @@ async function fetchUserProfile() {
 function renderProfileModalContent(profile) {
     const userName = profile?.userName || state.auth.userName || "Member";
     const email = profile?.email || state.auth.email || "";
-    const imagePath = profile?.imagePath ?? profile?.profileImageUrl ?? state.auth.profileImage;
+    const imagePath = profile?.profileImagePath ?? profile?.imagePath ?? profile?.profileImageUrl ?? state.auth.profileImage;
 
     document.getElementById("profileNameDisplay").textContent = userName;
     document.getElementById("profileEmailDisplay").textContent = email;
@@ -556,7 +534,6 @@ function renderProfileModalContent(profile) {
         .join("");
 }
 
-// Endpoint 4: POST /api/Users/profile-image
 async function handleProfileImageUpload(e) {
     e.preventDefault();
     const fileInput = document.getElementById("profileImageInput");
@@ -575,8 +552,8 @@ async function handleProfileImageUpload(e) {
         showSuccessToast: true
     });
 
-    if (result && (result.imagePath || typeof result === "string")) {
-        state.auth.profileImage = typeof result === "string" ? result : result.imagePath;
+    if (result && (result.imagePath || result.profileImagePath || typeof result === "string")) {
+        state.auth.profileImage = typeof result === "string" ? result : (result.imagePath || result.profileImagePath);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state.auth));
     }
 
@@ -586,7 +563,6 @@ async function handleProfileImageUpload(e) {
     showToast("Profile avatar updated!", "success");
 }
 
-// Endpoint 5: GET /api/Addresses/my
 async function fetchMyAddresses() {
     if (!isUserAuthenticated()) return [];
     const data = await apiFetch("/api/Addresses/my", { silentError: true });
@@ -664,7 +640,6 @@ function renderSavedAddressesList() {
         .join("");
 }
 
-// Endpoint 6: POST /api/Addresses
 async function createNewAddress(street, city) {
     const created = await apiFetch("/api/Addresses", {
         method: "POST",
@@ -683,7 +658,6 @@ async function createNewAddress(street, city) {
     showToast("Delivery address added and selected!", "success");
 }
 
-// Endpoint 7: DELETE /api/Addresses/{id}
 async function deleteSavedAddress(addressId) {
     await apiFetch(`/api/Addresses/${encodeURIComponent(addressId)}`, {
         method: "DELETE",
@@ -695,24 +669,13 @@ async function deleteSavedAddress(addressId) {
 
 /* ============================================================================
    8. DISCOVERY FEED, RESTAURANTS & MENUS
-   Endpoints:
-   (8)  GET /api/Restaurants?search={kw}&categoryId={catId}&page={page}&pageSize={size}
-   (9)  GET /api/Restaurants/search?q={query}
-   (10) GET /api/Restaurants/{id}
-   (11) GET /api/Restaurants/{id}/menu
-   (12) GET /api/Menu/restaurant/{restaurantId}
-   (13) GET /api/Menu/categories
-   (14) GET /api/Menu/category/{categoryId}
-   (15) GET /api/Menu/search?q={term}&restaurantId={optionalId}
-   (16) GET /api/Menu/{id}
    ============================================================================ */
-
-// Endpoint 13: GET /api/Menu/categories
 async function fetchPublicCategories() {
     const data = await apiFetch("/api/Menu/categories", { silentError: true });
     const list = Array.isArray(data) ? data : data?.items || [];
     state.categories = list;
-    document.getElementById("heroCategoryCount").textContent = list.length;
+    const countEl = document.getElementById("heroCategoryCount");
+    if (countEl) countEl.textContent = list.length;
     renderCategoryRibbon();
     populateStorefrontCategoryDropdown();
     return list;
@@ -720,6 +683,7 @@ async function fetchPublicCategories() {
 
 function renderCategoryRibbon() {
     const ribbon = document.getElementById("categoryRibbon");
+    if (!ribbon) return;
     const activeCat = String(state.filters.categoryId || "");
 
     const allPill = `
@@ -745,17 +709,17 @@ function renderCategoryRibbon() {
         .join("");
 
     ribbon.innerHTML = allPill + catPills;
-    document.getElementById("clearCategoryFilterBtn").classList.toggle("hidden", activeCat === "");
+    const clearBtn = document.getElementById("clearCategoryFilterBtn");
+    if (clearBtn) clearBtn.classList.toggle("hidden", activeCat === "");
 }
 
-// Endpoint 14: GET /api/Menu/category/{categoryId}
 async function fetchDishesByCategory(categoryId, categoryName = "Selected Category") {
     const section = document.getElementById("categoryDishesSection");
     const grid = document.getElementById("categoryDishesGrid");
     const titleEl = document.getElementById("categoryDishesTitle");
 
-    if (!categoryId) {
-        section.classList.add("hidden");
+    if (!categoryId || !section || !grid) {
+        if (section) section.classList.add("hidden");
         return;
     }
 
@@ -774,7 +738,6 @@ async function fetchDishesByCategory(categoryId, categoryName = "Selected Catego
     grid.innerHTML = dishes.map((dish) => renderDishCardHtml(dish)).join("");
 }
 
-// Endpoint 8: GET /api/Restaurants?search={kw}&categoryId={catId}&page={page}&pageSize={size}
 async function fetchRestaurantsFeed() {
     const { search, categoryId, page, pageSize } = state.filters;
     const params = new URLSearchParams();
@@ -785,13 +748,11 @@ async function fetchRestaurantsFeed() {
     params.set("page", String(page));
     params.set("pageSize", String(pageSize));
 
-    const grid = document.getElementById("restaurantsGrid");
     const metaLabel = document.getElementById("restaurantsMetaLabel");
-    metaLabel.textContent = "Syncing kitchens...";
+    if (metaLabel) metaLabel.textContent = "Syncing kitchens...";
 
     const data = await apiFetch(`/api/Restaurants?${params.toString()}`);
 
-    // Support both paged response object and flat array
     let items = [];
     let totalCount = 0;
     let totalPages = 1;
@@ -810,8 +771,9 @@ async function fetchRestaurantsFeed() {
     state.filters.totalCount = totalCount;
     state.filters.totalPages = totalPages;
 
-    document.getElementById("heroRestaurantCount").textContent = totalCount || items.length;
-    metaLabel.textContent = `Showing ${items.length} restaurant(s) • Page ${page} of ${totalPages}`;
+    const heroRestCount = document.getElementById("heroRestaurantCount");
+    if (heroRestCount) heroRestCount.textContent = totalCount || items.length;
+    if (metaLabel) metaLabel.textContent = `Showing ${items.length} restaurant(s) • Page ${page} of ${totalPages}`;
 
     renderRestaurantsGrid(items);
     renderPaginationControls();
@@ -849,6 +811,7 @@ function statusLabel(isOpen) {
 
 function renderRestaurantsGrid(restaurants) {
     const grid = document.getElementById("restaurantsGrid");
+    if (!grid) return;
     if (!restaurants.length) {
         grid.innerHTML = `
       <div class="admin-card" style="grid-column: 1 / -1; text-align:center;">
@@ -909,15 +872,19 @@ function renderPaginationControls() {
     const { page, totalPages } = state.filters;
     const currentHasFullPage = state.restaurantsFeed.length >= state.filters.pageSize;
 
-    document.getElementById("paginationInfo").textContent = `Page ${page} of ${Math.max(1, totalPages)}`;
-    document.getElementById("prevPageBtn").disabled = page <= 1;
-    document.getElementById("nextPageBtn").disabled = page >= totalPages && !currentHasFullPage;
+    const infoEl = document.getElementById("paginationInfo");
+    const prevBtn = document.getElementById("prevPageBtn");
+    const nextBtn = document.getElementById("nextPageBtn");
+
+    if (infoEl) infoEl.textContent = `Page ${page} of ${Math.max(1, totalPages)}`;
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = page >= totalPages && !currentHasFullPage;
 }
 
-// Endpoint 9: GET /api/Restaurants/search?q={query}
 async function runQuickRestaurantSearch() {
     const input = document.getElementById("quickRestaurantSearchInput");
     const resultsWrap = document.getElementById("quickRestaurantResults");
+    if (!input || !resultsWrap) return;
     const q = input.value.trim();
 
     if (!q) {
@@ -949,13 +916,13 @@ async function runQuickRestaurantSearch() {
         .join("");
 }
 
-// Endpoint 10: GET /api/Restaurants/{id} & Endpoint 11: GET /api/Restaurants/{id}/menu
 async function openRestaurantStorefront(restaurantId) {
     if (!restaurantId) return;
     state.activeStorefrontId = Number(restaurantId);
 
     switchMainView("storefrontView");
-    document.getElementById("quickFinderPopover").classList.add("hidden");
+    const pop = document.getElementById("quickFinderPopover");
+    if (pop) pop.classList.add("hidden");
     closePreviewDishesDrawer();
 
     document.getElementById("storefrontName").textContent = "Loading kitchen...";
@@ -979,11 +946,14 @@ async function openRestaurantStorefront(restaurantId) {
 
 async function refreshActiveStorefrontMenu() {
     if (!state.activeStorefrontId) return;
-    const menuData = await apiFetch(
-        `/api/Restaurants/${encodeURIComponent(state.activeStorefrontId)}/menu`
-    );
+    const [restaurantData, menuData] = await Promise.all([
+        apiFetch(`/api/Restaurants/${encodeURIComponent(state.activeStorefrontId)}`),
+        apiFetch(`/api/Restaurants/${encodeURIComponent(state.activeStorefrontId)}/menu`)
+    ]);
+    state.activeStorefrontData = restaurantData;
     const menuItems = Array.isArray(menuData) ? menuData : menuData?.items || [];
     state.activeStorefrontMenu = menuItems;
+    renderStorefrontHero(restaurantData);
     renderStorefrontMenu(menuItems);
     showToast("Kitchen menu refreshed.", "success");
 }
@@ -993,9 +963,12 @@ function renderStorefrontHero(r) {
     rememberRestaurant(r);
     const open = restaurantIsOpen(r);
     const statusBadge = document.getElementById("storefrontStatusBadge");
-    statusBadge.textContent = statusLabel(open);
-    statusBadge.className = `status-pill ${open ? "open" : "closed"}`;
-    document.getElementById("storefrontClosedNote").classList.toggle("hidden", open);
+    if (statusBadge) {
+        statusBadge.textContent = statusLabel(open);
+        statusBadge.className = `status-pill ${open ? "open" : "closed"}`;
+    }
+    const closedNote = document.getElementById("storefrontClosedNote");
+    if (closedNote) closedNote.classList.toggle("hidden", open);
     document.getElementById("storefrontName").textContent = r.name || "Restaurant";
     document.getElementById("storefrontAddress").textContent = r.address || "";
     document.getElementById("storefrontBannerWrap").innerHTML = renderMediaWithFallback(
@@ -1007,7 +980,9 @@ function renderStorefrontHero(r) {
 
 function renderStorefrontMenu(dishes) {
     const grid = document.getElementById("storefrontMenuGrid");
-    document.getElementById("storefrontDishCount").textContent = dishes.length;
+    const countEl = document.getElementById("storefrontDishCount");
+    if (countEl) countEl.textContent = dishes.length;
+    if (!grid) return;
 
     if (!dishes.length) {
         grid.innerHTML = `
@@ -1030,7 +1005,6 @@ function renderStorefrontMenu(dishes) {
         .join("");
 }
 
-// Endpoint 12: GET /api/Menu/restaurant/{restaurantId} (Used in Preview Drawer & Admin Menu Manager)
 async function openPreviewDishesDrawer(restaurantId, restaurantName = "Kitchen") {
     state.previewRestaurantId = Number(restaurantId);
     document.getElementById("previewDrawerRestaurantName").textContent = restaurantName;
@@ -1077,7 +1051,6 @@ function closePreviewDishesDrawer() {
     document.getElementById("previewDishesDrawer").classList.add("hidden");
 }
 
-// Endpoint 15: GET /api/Menu/search?q={term}&restaurantId={optionalId}
 async function searchDishes(term, optionalRestaurantId = null) {
     const params = new URLSearchParams();
     params.set("q", term);
@@ -1089,7 +1062,6 @@ async function searchDishes(term, optionalRestaurantId = null) {
     return Array.isArray(data) ? data : data?.items || [];
 }
 
-// Global Dish Search Handler (Home View)
 async function handleGlobalDishSearchSubmit(e) {
     e.preventDefault();
     const q = document.getElementById("globalDishSearchInput").value.trim();
@@ -1115,7 +1087,6 @@ async function handleGlobalDishSearchSubmit(e) {
     grid.innerHTML = results.map((d) => renderDishCardHtml(d)).join("");
 }
 
-// Storefront In-Restaurant Dish Search Handler
 async function handleStorefrontDishSearchSubmit(e) {
     e.preventDefault();
     if (!state.activeStorefrontId) return;
@@ -1133,7 +1104,6 @@ async function handleStorefrontDishSearchSubmit(e) {
     renderStorefrontMenu(results);
 }
 
-// Reusable Dish Card Template
 function renderDishCardHtml(dish) {
     const restId = dish.restaurantId ?? state.activeStorefrontId ?? "";
     const kitchenOpen = restaurantOpenById(restId, dish);
@@ -1143,7 +1113,7 @@ function renderDishCardHtml(dish) {
       <div class="dish-card-media" data-open-dish-modal-id="${escapeHtml(dish.id)}">
         ${renderMediaWithFallback(dish.imagePath, "dish", dish.name)}
         <span class="dish-status-pill ${available ? "available" : "soldout"}">
-          ${available ? "Available" : "Sold Out"}
+          ${!kitchenOpen ? "Kitchen Closed" : available ? "Available" : "Sold Out"}
         </span>
         <span class="dish-price-tag">${formatCurrency(dish.price)}</span>
       </div>
@@ -1181,7 +1151,6 @@ function renderDishCardHtml(dish) {
   `;
 }
 
-// Endpoint 16: GET /api/Menu/{id} (Dish Detail Modal)
 async function openDishDetailModal(dishId) {
     if (!dishId) return;
     openModal("dishDetailModal");
@@ -1200,7 +1169,7 @@ async function openDishDetailModal(dishId) {
     );
     document.getElementById("dishModalCategoryBadge").textContent = dish.categoryName || "Menu Item";
     const availBadge = document.getElementById("dishModalAvailabilityBadge");
-    availBadge.textContent = available ? "Available Now" : "Currently Sold Out";
+    availBadge.textContent = !kitchenOpen ? "Kitchen Closed" : available ? "Available Now" : "Currently Sold Out";
     availBadge.className = `dish-status-pill ${available ? "available" : "soldout"}`;
 
     document.getElementById("dishModalName").textContent = dish.name;
@@ -1216,14 +1185,7 @@ async function openDishDetailModal(dishId) {
 
 /* ============================================================================
    9. SHOPPING CART & SINGLE-RESTAURANT CONFLICT HANDLER
-   Endpoints:
-   (17) GET /api/Cart
-   (18) POST /api/Cart/items
-   (19) PUT /api/Cart/items/{menuItemId}
-   (20) DELETE /api/Cart/items/{menuItemId}
    ============================================================================ */
-
-// Endpoint 17: GET /api/Cart
 async function fetchCart() {
     if (!isUserAuthenticated()) {
         state.cart = { id: null, restaurantId: null, restaurantName: null, totalPrice: 0, items: [] };
@@ -1259,24 +1221,31 @@ function renderCartUI() {
         state.cart.totalPrice ||
         items.reduce((sum, item) => sum + (Number(item.lineTotal) || Number(item.price) * Number(item.quantity) || 0), 0);
 
-    document.getElementById("cartCountBadge").textContent = String(totalCount);
-    document.getElementById("cartTotalPriceLabel").textContent = formatCurrency(totalPrice);
-    document.getElementById("cartDrawerTotal").textContent = formatCurrency(totalPrice);
+    const badgeEl = document.getElementById("cartCountBadge");
+    const totalLabelEl = document.getElementById("cartTotalPriceLabel");
+    const drawerTotalEl = document.getElementById("cartDrawerTotal");
+
+    if (badgeEl) badgeEl.textContent = String(totalCount);
+    if (totalLabelEl) totalLabelEl.textContent = formatCurrency(totalPrice);
+    if (drawerTotalEl) drawerTotalEl.textContent = formatCurrency(totalPrice);
 
     const banner = document.getElementById("cartRestaurantBanner");
-    if (items.length > 0 && (state.cart.restaurantName || state.cart.restaurantId)) {
-        banner.classList.remove("hidden");
-        document.getElementById("cartRestaurantNameLabel").textContent =
-            state.cart.restaurantName || `Kitchen #${state.cart.restaurantId}`;
-        document.getElementById("cartRestaurantIdLabel").textContent = state.cart.restaurantId
-            ? `ID #${state.cart.restaurantId}`
-            : "";
-    } else {
-        banner.classList.add("hidden");
+    if (banner) {
+        if (items.length > 0 && (state.cart.restaurantName || state.cart.restaurantId)) {
+            banner.classList.remove("hidden");
+            document.getElementById("cartRestaurantNameLabel").textContent =
+                state.cart.restaurantName || `Kitchen #${state.cart.restaurantId}`;
+            document.getElementById("cartRestaurantIdLabel").textContent = state.cart.restaurantId
+                ? `ID #${state.cart.restaurantId}`
+                : "";
+        } else {
+            banner.classList.add("hidden");
+        }
     }
 
     const listEl = document.getElementById("cartItemsList");
     const placeOrderBtn = document.getElementById("placeOrderBtn");
+    if (!listEl || !placeOrderBtn) return;
 
     if (!items.length) {
         listEl.innerHTML = `
@@ -1332,7 +1301,6 @@ function renderCartUI() {
         .join("");
 }
 
-// Endpoint 18: POST /api/Cart/items (With Single-Restaurant Business Rule Enforcement)
 async function addItemToCart(menuItemId, quantity = 1, targetRestaurantId = null, dishName = "Dish") {
     if (!isUserAuthenticated()) {
         showToast("Please sign in to add dishes to your basket.", "warn");
@@ -1349,7 +1317,6 @@ async function addItemToCart(menuItemId, quantity = 1, targetRestaurantId = null
         return;
     }
 
-    // Proactive client-side check if cart already has items from a different restaurant
     if (
         state.cart.items.length > 0 &&
         state.cart.restaurantId &&
@@ -1369,11 +1336,10 @@ async function addItemToCart(menuItemId, quantity = 1, targetRestaurantId = null
         await fetchCart();
         showToast(`Added ${cleanQty}x "${dishName}" to your basket!`, "success");
     } catch (error) {
-        // If backend rejected due to different restaurant conflict, open conflict resolution modal
         const msg = (error.message || "").toLowerCase();
         if (
             state.cart.items.length > 0 &&
-            (msg.includes("restaurant") || msg.includes("different") || error.status === 400 || error.status === 409)
+            (msg.includes("restaurant") || msg.includes("different"))
         ) {
             promptCartConflictModal(cleanDishId, cleanQty, cleanRestId, dishName, error.message);
         } else {
@@ -1385,9 +1351,11 @@ async function addItemToCart(menuItemId, quantity = 1, targetRestaurantId = null
 function promptCartConflictModal(menuItemId, quantity, restaurantId, dishName, customMessage = null) {
     state.pendingConflictItem = { menuItemId, quantity, restaurantId, dishName };
     const msgEl = document.getElementById("cartConflictMessage");
-    msgEl.textContent =
-        customMessage ||
-        `Your basket currently holds items from "${state.cart.restaurantName || `Kitchen #${state.cart.restaurantId}`}". Would you like to clear your current basket and add "${dishName}" instead?`;
+    if (msgEl) {
+        msgEl.textContent =
+            customMessage ||
+            `Your basket currently holds items from "${state.cart.restaurantName || `Kitchen #${state.cart.restaurantId}`}". Would you like to clear your current basket and add "${dishName}" instead?`;
+    }
     openModal("cartConflictModal");
 }
 
@@ -1396,7 +1364,6 @@ async function resolveCartConflictAndAdd() {
     if (!pending) return;
 
     closeModal("cartConflictModal");
-    // Delete all existing items in the cart via DELETE /api/Cart/items/{menuItemId}
     for (const item of state.cart.items) {
         await apiFetch(`/api/Cart/items/${encodeURIComponent(item.menuItemId)}`, {
             method: "DELETE",
@@ -1408,7 +1375,6 @@ async function resolveCartConflictAndAdd() {
     await addItemToCart(pending.menuItemId, pending.quantity, pending.restaurantId, pending.dishName);
 }
 
-// Endpoint 19: PUT /api/Cart/items/{menuItemId} & Endpoint 20: DELETE /api/Cart/items/{menuItemId}
 async function updateCartItemQuantity(menuItemId, newQuantity) {
     const qty = Number(newQuantity);
     if (qty < 1) {
@@ -1433,15 +1399,7 @@ async function removeCartItem(menuItemId) {
 
 /* ============================================================================
    10. CHECKOUT & ORDER STATE MACHINE
-   Endpoints:
-   (21) POST /api/Orders
-   (22) GET /api/Orders/my
-   (23) GET /api/Orders/{id}
-   (24) GET /api/Orders
-   (25) PATCH /api/Orders/{id}/status
    ============================================================================ */
-
-// Endpoint 21: POST /api/Orders
 async function handlePlaceOrder() {
     if (!isUserAuthenticated()) {
         openModal("authModal");
@@ -1459,11 +1417,12 @@ async function handlePlaceOrder() {
     }
 
     const checkoutSelect = document.getElementById("checkoutAddressSelect");
-    const addressId = Number(checkoutSelect.value || state.selectedAddressId);
+    const addressId = Number(checkoutSelect?.value || state.selectedAddressId);
 
     if (!addressId) {
         showToast("Please select or add a delivery address before placing your order.", "warn");
-        document.getElementById("cartAddAddressForm").classList.remove("hidden");
+        const addAddrForm = document.getElementById("cartAddAddressForm");
+        if (addAddrForm) addAddrForm.classList.remove("hidden");
         return;
     }
 
@@ -1477,14 +1436,12 @@ async function handlePlaceOrder() {
     await fetchCart();
     showToast("Order dispatched to kitchen!", "success");
 
-    // Switch to My Orders view and open receipt if ID returned
     await openMyOrdersView();
     if (orderData && orderData.id) {
         await openOrderDetailModal(orderData.id);
     }
 }
 
-// Endpoint 22: GET /api/Orders/my
 async function openMyOrdersView() {
     if (!isUserAuthenticated()) {
         openModal("authModal");
@@ -1496,6 +1453,7 @@ async function openMyOrdersView() {
 
 async function fetchMyOrders() {
     const grid = document.getElementById("myOrdersGrid");
+    if (!grid) return;
     grid.innerHTML = `<p class="muted-helper">Loading your orders...</p>`;
 
     const data = await apiFetch("/api/Orders/my");
@@ -1514,7 +1472,6 @@ async function fetchMyOrders() {
     grid.innerHTML = orders
         .map((order) => {
             const st = normalizeOrderStatus(order.status);
-            // Customer cancellation rule: ONLY allowed if status is Created (0) or Confirmed (1)
             const canCustomerCancel = st.code === 0 || st.code === 1;
 
             return `
@@ -1543,12 +1500,12 @@ async function fetchMyOrders() {
             </button>
             ${canCustomerCancel
                     ? `<button
-                     type="button"
-                     class="btn-danger btn-sm"
-                     data-cancel-order-id="${escapeHtml(order.id)}"
-                   >
-                     Cancel Order
-                   </button>`
+                   type="button"
+                   class="btn-danger btn-sm"
+                   data-cancel-order-id="${escapeHtml(order.id)}"
+                 >
+                   Cancel Order
+                 </button>`
                     : ""
                 }
           </div>
@@ -1558,12 +1515,12 @@ async function fetchMyOrders() {
         .join("");
 }
 
-// Endpoint 23: GET /api/Orders/{id} (Order Detail Modal)
 async function openOrderDetailModal(orderId) {
     if (!orderId) return;
     openModal("orderDetailModal");
     document.getElementById("orderModalTitle").textContent = `Order #${orderId}`;
     const bodyEl = document.getElementById("orderDetailModalBody");
+    if (!bodyEl) return;
     bodyEl.innerHTML = `<p class="muted-helper">Loading itemized receipt via GET /api/Orders/${escapeHtml(orderId)}...</p>`;
 
     const order = await apiFetch(`/api/Orders/${encodeURIComponent(orderId)}`);
@@ -1593,6 +1550,7 @@ async function openOrderDetailModal(orderId) {
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
       <div>
         <p><strong>Placed:</strong> ${escapeHtml(formatDateTime(order.createdAt || order.orderDate))}</p>
+        ${order.userEmail || order.userName ? `<p><strong>Customer:</strong> ${escapeHtml(order.userName || order.userEmail)}</p>` : ""}
         ${order.restaurantName ? `<p><strong>Restaurant:</strong> ${escapeHtml(order.restaurantName)}</p>` : ""}
         ${order.deliveryAddress || order.address ? `<p><strong>Delivery Address:</strong> ${escapeHtml(order.deliveryAddress || order.address)}</p>` : ""}
       </div>
@@ -1622,7 +1580,6 @@ async function openOrderDetailModal(orderId) {
   `;
 }
 
-// Endpoint 25: PATCH /api/Orders/{id}/status
 async function updateOrderStatus(orderId, nextStatusInt) {
     const numericStatus = Number(nextStatusInt);
     await apiFetch(`/api/Orders/${encodeURIComponent(orderId)}/status`, {
@@ -1634,34 +1591,20 @@ async function updateOrderStatus(orderId, nextStatusInt) {
     const targetState = ORDER_STATES[numericStatus];
     showToast(`Order #${orderId} updated to ${targetState ? targetState.label : numericStatus}.`, "success");
 
-    // Refresh whichever order view is active
-    if (!document.getElementById("myOrdersView").classList.contains("hidden")) {
+    const myOrdersView = document.getElementById("myOrdersView");
+    const adminView = document.getElementById("adminDashboardView");
+
+    if (myOrdersView && !myOrdersView.classList.contains("hidden")) {
         await fetchMyOrders();
     }
-    if (!document.getElementById("adminDashboardView").classList.contains("hidden")) {
+    if (adminView && !adminView.classList.contains("hidden")) {
         await fetchAdminAllOrders();
     }
 }
 
 /* ============================================================================
-   11. FRICTIONLESS ADMIN CONTROL CENTER (100% DROPDOWN-DRIVEN UX)
-   Endpoints:
-   (26) POST /api/Admin/restaurants
-   (27) POST /api/Restaurants
-   (28) PUT /api/Admin/restaurants/{id}
-   (29) DELETE /api/Admin/restaurants/{id}
-   (30) POST /api/Admin/restaurants/{id}/image
-   (31) GET /api/Admin/categories
-   (32) POST /api/Admin/categories
-   (33) POST /api/Admin/menuitems
-   (34) POST /api/Restaurants/{id}/menu
-   (35) PUT /api/Admin/menuitems/{id}
-   (36) DELETE /api/Admin/menuitems/{id}
-   (37) POST /api/Admin/menuitems/{id}/image
-   (38) POST /api/Admin/users/promote?email=...
-   (24) GET /api/Orders
+   11. ADMIN CONTROL CENTER (REFACTORED TO /api/Restaurants & /api/Menu)
    ============================================================================ */
-
 async function syncAdminDropdownData() {
     if (!isUserAdmin()) return;
     await Promise.allSettled([
@@ -1675,10 +1618,12 @@ async function fetchAllRestaurantsForAdminDropdowns() {
     const data = await apiFetch("/api/Restaurants?page=1&pageSize=200", { silentError: true });
     const list = Array.isArray(data) ? data : data?.items || data?.restaurants || [];
     state.allRestaurantsCache = list;
+    list.forEach(rememberRestaurant);
 
     const restSelect1 = document.getElementById("adminRestaurantSelect");
     const restSelect2 = document.getElementById("adminMenuRestaurantSelect");
     const restSelect3 = document.getElementById("adminNewDishRestaurantSelect");
+    if (!restSelect1 || !restSelect2 || !restSelect3) return;
 
     const prevVal1 = restSelect1.value;
     const prevVal2 = restSelect2.value;
@@ -1710,9 +1655,9 @@ async function fetchAllRestaurantsForAdminDropdowns() {
     }
 }
 
-// Auto-Fill Restaurant Editor when Admin picks from dropdown
 function handleAdminRestaurantDropdownChange() {
     const select = document.getElementById("adminRestaurantSelect");
+    if (!select) return;
     const selectedId = select.value;
 
     if (!selectedId) {
@@ -1731,10 +1676,15 @@ function handleAdminRestaurantDropdownChange() {
 
     const nameInput = document.getElementById("adminEditRestName");
     const addrInput = document.getElementById("adminEditRestAddress");
+    const activeInput = document.getElementById("adminEditRestIsActive");
+
     nameInput.value = rest.name || "";
     addrInput.value = rest.address || "";
+    activeInput.checked = restaurantIsOpen(rest);
+
     nameInput.disabled = false;
     addrInput.disabled = false;
+    activeInput.disabled = false;
 
     document.getElementById("adminSaveRestaurantBtn").disabled = false;
     document.getElementById("adminDeleteRestaurantBtn").disabled = false;
@@ -1746,13 +1696,15 @@ function handleAdminRestaurantDropdownChange() {
     ${renderMediaWithFallback(rest.imagePath, "restaurant", rest.name)}
     <div>
       <strong>${escapeHtml(rest.name)}</strong>
-      <div class="muted-helper">Image path: ${escapeHtml(rest.imagePath || "None (using SVG illustration)")}</div>
+      <div class="muted-helper">Status: ${statusLabel(restaurantIsOpen(rest))} &bull; Image: ${escapeHtml(rest.imagePath || "SVG default")}</div>
     </div>
   `;
 }
 
 function resetAdminRestaurantEditor() {
-    document.getElementById("adminEditRestId").value = "";
+    const idEl = document.getElementById("adminEditRestId");
+    if (!idEl) return;
+    idEl.value = "";
     document.getElementById("adminEditRestImagePath").value = "";
     const nameInput = document.getElementById("adminEditRestName");
     const addrInput = document.getElementById("adminEditRestAddress");
@@ -1771,7 +1723,7 @@ function resetAdminRestaurantEditor() {
     document.getElementById("adminRestCurrentImagePreview").innerHTML = `<span class="muted-helper">No restaurant selected.</span>`;
 }
 
-// Endpoint 28: PUT /api/Admin/restaurants/{id}
+// PUT /api/Restaurants/{id}
 async function handleAdminUpdateRestaurantSubmit(e) {
     e.preventDefault();
     const id = Number(document.getElementById("adminEditRestId").value);
@@ -1780,18 +1732,19 @@ async function handleAdminUpdateRestaurantSubmit(e) {
     const name = document.getElementById("adminEditRestName").value.trim();
     const address = document.getElementById("adminEditRestAddress").value.trim();
     const imagePath = document.getElementById("adminEditRestImagePath").value.trim() || null;
+    const isActive = document.getElementById("adminEditRestIsActive").checked;
 
-    await apiFetch(`/api/Admin/restaurants/${encodeURIComponent(id)}`, {
+    await apiFetch(`/api/Restaurants/${encodeURIComponent(id)}`, {
         method: "PUT",
-        body: { id, name, address, imagePath },
+        body: { id, name, address, imagePath, isActive },
         showSuccessToast: true
     });
 
-    showToast(`Updated "${name}"!`, "success");
+    showToast(`Updated "${name}" (${isActive ? "Open" : "Closed"})!`, "success");
     await Promise.all([fetchAllRestaurantsForAdminDropdowns(), fetchRestaurantsFeed()]);
 }
 
-// Endpoint 29: DELETE /api/Admin/restaurants/{id}
+// DELETE /api/Restaurants/{id}
 async function handleAdminDeleteRestaurant() {
     const id = Number(document.getElementById("adminEditRestId").value);
     const name = document.getElementById("adminEditRestName").value;
@@ -1801,7 +1754,7 @@ async function handleAdminDeleteRestaurant() {
         return;
     }
 
-    await apiFetch(`/api/Admin/restaurants/${encodeURIComponent(id)}`, {
+    await apiFetch(`/api/Restaurants/${encodeURIComponent(id)}`, {
         method: "DELETE",
         showSuccessToast: true
     });
@@ -1812,7 +1765,7 @@ async function handleAdminDeleteRestaurant() {
     await Promise.all([fetchAllRestaurantsForAdminDropdowns(), fetchRestaurantsFeed()]);
 }
 
-// Endpoint 30: POST /api/Admin/restaurants/{id}/image
+// POST /api/Restaurants/{id}/image
 async function handleAdminUploadRestaurantImage(e) {
     e.preventDefault();
     const id = Number(document.getElementById("adminEditRestId").value);
@@ -1825,7 +1778,7 @@ async function handleAdminUploadRestaurantImage(e) {
     const formData = new FormData();
     formData.append("image", fileInput.files[0]);
 
-    const res = await apiFetch(`/api/Admin/restaurants/${encodeURIComponent(id)}/image`, {
+    const res = await apiFetch(`/api/Restaurants/${encodeURIComponent(id)}/image`, {
         method: "POST",
         body: formData,
         isFormData: true,
@@ -1842,7 +1795,7 @@ async function handleAdminUploadRestaurantImage(e) {
     await Promise.all([fetchAllRestaurantsForAdminDropdowns(), fetchRestaurantsFeed()]);
 }
 
-// Endpoint 26: POST /api/Admin/restaurants
+// POST /api/Restaurants
 async function handleAdminCreateRestaurantSubmit(e) {
     e.preventDefault();
     const name = document.getElementById("adminNewRestName").value.trim();
@@ -1850,18 +1803,18 @@ async function handleAdminCreateRestaurantSubmit(e) {
     const imagePath = document.getElementById("adminNewRestImagePath").value.trim() || null;
     const isActive = document.getElementById("adminNewRestIsActive").checked;
 
-    await apiFetch("/api/Admin/restaurants", {
+    await apiFetch("/api/Restaurants", {
         method: "POST",
         body: { name, address, imagePath, isActive },
         showSuccessToast: true
     });
 
     document.getElementById("adminCreateRestaurantForm").reset();
+    document.getElementById("adminNewRestIsActive").checked = true;
     showToast(`Restaurant "${name}" added.`, "success");
     await Promise.all([fetchAllRestaurantsForAdminDropdowns(), fetchRestaurantsFeed()]);
 }
 
-// Endpoint 27: POST /api/Restaurants (Secondary Creation Route)
 async function handleQuickCreateRestaurantSubmit(e) {
     e.preventDefault();
     const name = document.getElementById("quickRestNameInput").value.trim();
@@ -1880,13 +1833,12 @@ async function handleQuickCreateRestaurantSubmit(e) {
 }
 
 /* ----------------------------------------------------------------------------
-   ADMIN TAB 2: TWO-STEP SMART MENU ITEM MANAGEMENT
+   ADMIN TAB 2: MENU ITEM MANAGEMENT
    ---------------------------------------------------------------------------- */
-
-// Step 1: When Admin selects a Restaurant in Tab 2, load its dishes via GET /api/Menu/restaurant/{restaurantId}
 async function handleAdminMenuRestaurantSelectChange() {
     const restId = document.getElementById("adminMenuRestaurantSelect").value;
     const dishSelect = document.getElementById("adminMenuDishSelect");
+    if (!dishSelect) return;
 
     resetAdminDishEditor();
 
@@ -1918,7 +1870,6 @@ async function handleAdminMenuRestaurantSelectChange() {
             .join("");
 }
 
-// Step 2: When Admin selects a Dish, auto-fill all fields
 function handleAdminMenuDishSelectChange() {
     const dishId = document.getElementById("adminMenuDishSelect").value;
     const restId = document.getElementById("adminMenuRestaurantSelect").value;
@@ -1947,7 +1898,6 @@ function handleAdminMenuDishSelectChange() {
     priceInput.value = Number(dish.price || 0).toFixed(2);
     availCheck.checked = dish.isAvailable !== false;
 
-    // Match category by categoryId or categoryName
     if (dish.categoryId) {
         catSelect.value = String(dish.categoryId);
     } else if (dish.categoryName) {
@@ -1977,7 +1927,9 @@ function handleAdminMenuDishSelectChange() {
 }
 
 function resetAdminDishEditor() {
-    document.getElementById("adminEditDishId").value = "";
+    const idEl = document.getElementById("adminEditDishId");
+    if (!idEl) return;
+    idEl.value = "";
     document.getElementById("adminEditDishRestaurantId").value = "";
     document.getElementById("adminEditDishImagePath").value = "";
 
@@ -2003,7 +1955,7 @@ function resetAdminDishEditor() {
         `<span class="muted-helper">Select a dish above to inspect its current photo and metadata.</span>`;
 }
 
-// Endpoint 35: PUT /api/Admin/menuitems/{id}
+// PUT /api/Menu/{id}
 async function handleAdminUpdateDishSubmit(e) {
     e.preventDefault();
     const id = Number(document.getElementById("adminEditDishId").value);
@@ -2014,7 +1966,7 @@ async function handleAdminUpdateDishSubmit(e) {
     const isAvailable = document.getElementById("adminEditDishAvailable").checked;
     const imagePath = document.getElementById("adminEditDishImagePath").value.trim() || null;
 
-    await apiFetch(`/api/Admin/menuitems/${encodeURIComponent(id)}`, {
+    await apiFetch(`/api/Menu/${encodeURIComponent(id)}`, {
         method: "PUT",
         body: {
             id,
@@ -2034,7 +1986,7 @@ async function handleAdminUpdateDishSubmit(e) {
     handleAdminMenuDishSelectChange();
 }
 
-// Endpoint 36: DELETE /api/Admin/menuitems/{id}
+// DELETE /api/Menu/{id}
 async function handleAdminDeleteDish() {
     const id = Number(document.getElementById("adminEditDishId").value);
     const name = document.getElementById("adminEditDishName").value;
@@ -2042,7 +1994,7 @@ async function handleAdminDeleteDish() {
 
     if (!window.confirm(`Delete dish "${name}" permanently?`)) return;
 
-    await apiFetch(`/api/Admin/menuitems/${encodeURIComponent(id)}`, {
+    await apiFetch(`/api/Menu/${encodeURIComponent(id)}`, {
         method: "DELETE",
         showSuccessToast: true
     });
@@ -2051,7 +2003,7 @@ async function handleAdminDeleteDish() {
     await handleAdminMenuRestaurantSelectChange();
 }
 
-// Endpoint 37: POST /api/Admin/menuitems/{id}/image
+// POST /api/Menu/{id}/image
 async function handleAdminUploadDishImage(e) {
     e.preventDefault();
     const id = Number(document.getElementById("adminEditDishId").value);
@@ -2064,7 +2016,7 @@ async function handleAdminUploadDishImage(e) {
     const formData = new FormData();
     formData.append("image", fileInput.files[0]);
 
-    const res = await apiFetch(`/api/Admin/menuitems/${encodeURIComponent(id)}/image`, {
+    const res = await apiFetch(`/api/Menu/${encodeURIComponent(id)}/image`, {
         method: "POST",
         body: formData,
         isFormData: true,
@@ -2083,7 +2035,7 @@ async function handleAdminUploadDishImage(e) {
     handleAdminMenuDishSelectChange();
 }
 
-// Endpoint 33: POST /api/Admin/menuitems
+// POST /api/Menu
 async function handleAdminCreateDishSubmit(e) {
     e.preventDefault();
     const restaurantId = Number(document.getElementById("adminNewDishRestaurantSelect").value);
@@ -2092,7 +2044,7 @@ async function handleAdminCreateDishSubmit(e) {
     const price = parseFloat(document.getElementById("adminNewDishPrice").value);
     const isAvailable = document.getElementById("adminNewDishAvailable").checked;
 
-    await apiFetch("/api/Admin/menuitems", {
+    await apiFetch("/api/Menu", {
         method: "POST",
         body: {
             name,
@@ -2113,7 +2065,7 @@ async function handleAdminCreateDishSubmit(e) {
     }
 }
 
-// Endpoint 34: POST /api/Restaurants/{id}/menu (Storefront Admin Quick-Add Dish Modal)
+// POST /api/Restaurants/{id}/menu
 async function handleStorefrontAddDishSubmit(e) {
     e.preventDefault();
     if (!state.activeStorefrontId) return;
@@ -2146,16 +2098,16 @@ async function handleStorefrontAddDishSubmit(e) {
 /* ----------------------------------------------------------------------------
    ADMIN TAB 3: CATEGORIES & USER ROLE PROMOTION
    ---------------------------------------------------------------------------- */
-
-// Endpoint 31: GET /api/Admin/categories
+// GET /api/Menu/categories
 async function fetchAdminCategories() {
-    const data = await apiFetch("/api/Admin/categories", { silentError: true });
+    const data = await apiFetch("/api/Menu/categories", { silentError: true });
     const list = Array.isArray(data) ? data : data?.items || state.categories;
     state.adminCategories = list;
 
-    // Populate Admin Category Dropdowns
     const editCatSelect = document.getElementById("adminEditDishCategorySelect");
     const newCatSelect = document.getElementById("adminNewDishCategorySelect");
+    if (!editCatSelect || !newCatSelect) return;
+
     const prevEditVal = editCatSelect.value;
     const prevNewVal = newCatSelect.value;
 
@@ -2169,7 +2121,6 @@ async function fetchAdminCategories() {
     if (prevEditVal) editCatSelect.value = prevEditVal;
     if (prevNewVal) newCatSelect.value = prevNewVal;
 
-    // Render Category Chips List in Tab 3
     const listContainer = document.getElementById("adminCategoriesList");
     if (listContainer) {
         listContainer.innerHTML = list.length
@@ -2194,14 +2145,14 @@ function populateStorefrontCategoryDropdown() {
         .join("");
 }
 
-// Endpoint 32: POST /api/Admin/categories
+// POST /api/Menu/categories
 async function handleAdminCreateCategorySubmit(e) {
     e.preventDefault();
     const input = document.getElementById("adminCategoryNameInput");
     const name = input.value.trim();
     if (!name) return;
 
-    await apiFetch("/api/Admin/categories", {
+    await apiFetch("/api/Menu/categories", {
         method: "POST",
         body: { name },
         showSuccessToast: true
@@ -2212,14 +2163,13 @@ async function handleAdminCreateCategorySubmit(e) {
     await Promise.all([fetchAdminCategories(), fetchPublicCategories()]);
 }
 
-// Endpoint 38: POST /api/Admin/users/promote?email=${encodeURIComponent(email)}
+// POST /api/Admin/users/promote?email=${encodeURIComponent(email)}
 async function handleAdminPromoteUserSubmit(e) {
     e.preventDefault();
     const emailInput = document.getElementById("adminPromoteEmailInput");
     const email = emailInput.value.trim();
     if (!email) return;
 
-    // CRITICAL: email MUST be passed as a URL query parameter, NOT in JSON body
     await apiFetch(`/api/Admin/users/promote?email=${encodeURIComponent(email)}`, {
         method: "POST",
         showSuccessToast: true
@@ -2231,7 +2181,6 @@ async function handleAdminPromoteUserSubmit(e) {
 
 /* ----------------------------------------------------------------------------
    ADMIN TAB 4: LIVE ORDER OPERATIONS BOARD
-   Endpoint 24: GET /api/Orders & Endpoint 25: PATCH /api/Orders/{id}/status
    ---------------------------------------------------------------------------- */
 async function fetchAdminAllOrders() {
     const board = document.getElementById("adminOrdersBoard");
@@ -2246,6 +2195,7 @@ async function fetchAdminAllOrders() {
 
 function renderAdminOrdersBoard() {
     const board = document.getElementById("adminOrdersBoard");
+    if (!board) return;
     const filter = state.adminOrderFilter;
 
     const filtered = state.adminOrders.filter((o) => {
@@ -2268,7 +2218,7 @@ function renderAdminOrdersBoard() {
         .map((order) => {
             const st = normalizeOrderStatus(order.status);
             const nextState = st.next !== null ? ORDER_STATES[st.next] : null;
-            const canCancel = st.canCancel; // Strictly true ONLY for Created (0) and Confirmed (1)
+            const canCancel = st.canCancel;
 
             return `
         <article class="order-card">
@@ -2281,7 +2231,7 @@ function renderAdminOrdersBoard() {
           </div>
 
           <div style="font-size:0.86rem;">
-            ${order.userEmail || order.userName ? `<p><strong>Customer:</strong> ${escapeHtml(order.userEmail || order.userName)}</p>` : ""}
+            ${order.userEmail || order.userName ? `<p><strong>Customer:</strong> ${escapeHtml(order.userName ? `${order.userName} (${order.userEmail || ""})` : order.userEmail)}</p>` : ""}
             ${order.restaurantName ? `<p><strong>Kitchen:</strong> ${escapeHtml(order.restaurantName)}</p>` : ""}
             ${order.deliveryAddress || order.address ? `<p><strong>Address:</strong> ${escapeHtml(order.deliveryAddress || order.address)}</p>` : ""}
             <p style="margin-top:0.35rem;"><strong>Total:</strong> ${formatCurrency(order.totalPrice ?? order.totalAmount)}</p>
@@ -2383,7 +2333,6 @@ function switchAuthTab(tab) {
    13. EVENT LISTENERS & INITIALIZATION
    ============================================================================ */
 function bindAllEvents() {
-    // Topbar Navigation
     document.getElementById("brandHomeLink").addEventListener("click", (e) => {
         e.preventDefault();
         switchMainView("homeDiscoveryView");
@@ -2406,15 +2355,16 @@ function bindAllEvents() {
         await syncAdminDropdownData();
     });
 
-    // Address Selectors Synchronization
     document.getElementById("topAddressSelect").addEventListener("change", (e) => {
         state.selectedAddressId = e.target.value;
-        document.getElementById("checkoutAddressSelect").value = e.target.value;
+        const checkoutSelect = document.getElementById("checkoutAddressSelect");
+        if (checkoutSelect) checkoutSelect.value = e.target.value;
     });
 
     document.getElementById("checkoutAddressSelect").addEventListener("change", (e) => {
         state.selectedAddressId = e.target.value;
-        document.getElementById("topAddressSelect").value = e.target.value;
+        const topSelect = document.getElementById("topAddressSelect");
+        if (topSelect) topSelect.value = e.target.value;
     });
 
     document.getElementById("topManageAddressBtn").addEventListener("click", async () => {
@@ -2422,14 +2372,12 @@ function bindAllEvents() {
         await Promise.all([fetchUserProfile(), fetchMyAddresses()]);
     });
 
-    // Global Dish Search
     document.getElementById("globalDishSearchForm").addEventListener("submit", handleGlobalDishSearchSubmit);
     document.getElementById("closeDishSearchBtn").addEventListener("click", () => {
         document.getElementById("dishSearchResultsSection").classList.add("hidden");
         document.getElementById("globalDishSearchInput").value = "";
     });
 
-    // Quick Restaurant Finder Popover
     document.getElementById("toggleQuickFinderBtn").addEventListener("click", () => {
         const pop = document.getElementById("quickFinderPopover");
         pop.classList.toggle("hidden");
@@ -2446,7 +2394,6 @@ function bindAllEvents() {
         }
     });
 
-    // Category Ribbon Filtering + Category Dish Spotlight
     document.getElementById("categoryRibbon").addEventListener("click", async (e) => {
         const pill = e.target.closest(".category-pill");
         if (!pill) return;
@@ -2480,7 +2427,6 @@ function bindAllEvents() {
         document.getElementById("categoryDishesSection").classList.add("hidden");
     });
 
-    // Home Feed Search, PageSize & Pagination
     let feedSearchDebounce = null;
     document.getElementById("homeRestaurantSearchInput").addEventListener("input", (e) => {
         clearTimeout(feedSearchDebounce);
@@ -2511,7 +2457,6 @@ function bindAllEvents() {
         fetchRestaurantsFeed();
     });
 
-    // Storefront Controls
     document.getElementById("backToFeedBtn").addEventListener("click", () => {
         switchMainView("homeDiscoveryView");
     });
@@ -2537,7 +2482,6 @@ function bindAllEvents() {
 
     document.getElementById("storefrontAddDishForm").addEventListener("submit", handleStorefrontAddDishSubmit);
 
-    // Preview Dishes Drawer Controls
     document.getElementById("closePreviewDishesDrawerBtn").addEventListener("click", closePreviewDishesDrawer);
     document.getElementById("previewDishesBackdrop").addEventListener("click", closePreviewDishesDrawer);
     document.getElementById("previewOpenFullStorefrontBtn").addEventListener("click", () => {
@@ -2546,7 +2490,6 @@ function bindAllEvents() {
         }
     });
 
-    // Dish Detail Modal Controls
     document.getElementById("closeDishModalBtn").addEventListener("click", () => closeModal("dishDetailModal"));
     document.getElementById("dishModalQtyMinus").addEventListener("click", () => {
         const input = document.getElementById("dishModalQtyInput");
@@ -2564,7 +2507,6 @@ function bindAllEvents() {
         await addItemToCart(d.id, qty, d.restaurantId ?? state.activeStorefrontId, d.name);
     });
 
-    // Cart Drawer & Inline Checkout Address Controls
     document.getElementById("openCartDrawerBtn").addEventListener("click", openCartDrawer);
     document.getElementById("closeCartDrawerBtn").addEventListener("click", closeCartDrawer);
     document.getElementById("cartDrawerBackdrop").addEventListener("click", closeCartDrawer);
@@ -2584,7 +2526,6 @@ function bindAllEvents() {
 
     document.getElementById("placeOrderBtn").addEventListener("click", handlePlaceOrder);
 
-    // Cart Conflict Modal Controls
     document.getElementById("closeCartConflictModalBtn").addEventListener("click", () => closeModal("cartConflictModal"));
     document.getElementById("cancelConflictBtn").addEventListener("click", () => {
         state.pendingConflictItem = null;
@@ -2592,7 +2533,6 @@ function bindAllEvents() {
     });
     document.getElementById("confirmClearAndAddBtn").addEventListener("click", resolveCartConflictAndAdd);
 
-    // Auth Modal Controls
     document.getElementById("authTriggerBtn").addEventListener("click", () => {
         switchAuthTab("login");
         openModal("authModal");
@@ -2603,7 +2543,6 @@ function bindAllEvents() {
     document.getElementById("loginForm").addEventListener("submit", handleLoginSubmit);
     document.getElementById("registerForm").addEventListener("submit", handleRegisterSubmit);
 
-    // Profile & Addresses Modal Controls
     document.getElementById("userProfileTriggerBtn").addEventListener("click", async () => {
         openModal("profileModal");
         await Promise.all([fetchUserProfile(), fetchMyAddresses()]);
@@ -2639,13 +2578,11 @@ function bindAllEvents() {
         clearSession();
     });
 
-    // My Orders & Order Detail Modal Controls
     document.getElementById("refreshMyOrdersBtn").addEventListener("click", fetchMyOrders);
     document.getElementById("closeOrderDetailModalBtn").addEventListener("click", () =>
         closeModal("orderDetailModal")
     );
 
-    // Admin Control Center Tabs & Forms
     document.querySelectorAll(".admin-tab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
             const targetTab = btn.getAttribute("data-admin-tab");
@@ -2707,9 +2644,7 @@ function bindAllEvents() {
 
     document.getElementById("adminRefreshOrdersBtn").addEventListener("click", fetchAdminAllOrders);
 
-    // Global Delegated Click Listener for Dynamic Cards, Drawers, Cart Steppers & Order Actions
     document.body.addEventListener("click", async (e) => {
-        // 1. Open Restaurant Storefront
         const openStorefrontEl = e.target.closest("[data-open-storefront-id]");
         if (openStorefrontEl) {
             const restId = openStorefrontEl.getAttribute("data-open-storefront-id");
@@ -2717,7 +2652,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 2. Preview Dishes Drawer on Restaurant Card
         const previewBtn = e.target.closest("[data-preview-dishes-id]");
         if (previewBtn) {
             const restId = previewBtn.getAttribute("data-preview-dishes-id");
@@ -2726,7 +2660,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 3. Open Dish Quick-View Modal
         const dishModalTrigger = e.target.closest("[data-open-dish-modal-id]");
         if (dishModalTrigger) {
             const dishId = dishModalTrigger.getAttribute("data-open-dish-modal-id");
@@ -2734,7 +2667,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 4. One-Tap "+ Add" Dish Button
         const quickAddBtn = e.target.closest("[data-quick-add-dish-id]");
         if (quickAddBtn) {
             const dishId = quickAddBtn.getAttribute("data-quick-add-dish-id");
@@ -2744,7 +2676,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 5. Cart Quantity Stepper (+ / -)
         const cartStepBtn = e.target.closest("[data-cart-step-id]");
         if (cartStepBtn) {
             const menuItemId = cartStepBtn.getAttribute("data-cart-step-id");
@@ -2753,7 +2684,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 6. Cart Remove Item Button
         const cartRemoveBtn = e.target.closest("[data-cart-remove-id]");
         if (cartRemoveBtn) {
             const menuItemId = cartRemoveBtn.getAttribute("data-cart-remove-id");
@@ -2761,7 +2691,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 7. Delete Saved Address
         const deleteAddrBtn = e.target.closest("[data-delete-address-id]");
         if (deleteAddrBtn) {
             const addrId = deleteAddrBtn.getAttribute("data-delete-address-id");
@@ -2769,7 +2698,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 8. View Order Receipt / Details Modal
         const viewOrderBtn = e.target.closest("[data-view-order-id]");
         if (viewOrderBtn) {
             const orderId = viewOrderBtn.getAttribute("data-view-order-id");
@@ -2777,7 +2705,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 9. Advance Order Status (Admin State Machine)
         const advanceOrderBtn = e.target.closest("[data-advance-order-id]");
         if (advanceOrderBtn) {
             const orderId = advanceOrderBtn.getAttribute("data-advance-order-id");
@@ -2786,7 +2713,6 @@ function bindAllEvents() {
             return;
         }
 
-        // 10. Cancel Order (Customer or Admin when status is 0 or 1)
         const cancelOrderBtn = e.target.closest("[data-cancel-order-id]");
         if (cancelOrderBtn) {
             const orderId = cancelOrderBtn.getAttribute("data-cancel-order-id");

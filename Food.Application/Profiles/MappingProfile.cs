@@ -2,9 +2,6 @@
 using Food.Application.DTOs;
 using Food.Domain.Models.Entities;
 using Food.Domain.Models.Identity;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Food.Application.Profiles
 {
@@ -26,6 +23,8 @@ namespace Food.Application.Profiles
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User != null ? (src.User.UserName ?? string.Empty) : string.Empty))
+                .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User != null ? (src.User.Email ?? string.Empty) : string.Empty))
                 .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant != null ? src.Restaurant.Name : string.Empty))
                 .ForMember(dest => dest.DeliveryAddress, opt => opt.MapFrom(src => src.Address != null ? $"{src.Address.City}, {src.Address.Street}" : string.Empty))
                 .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems));

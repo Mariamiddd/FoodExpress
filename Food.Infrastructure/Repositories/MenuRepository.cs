@@ -4,7 +4,8 @@ using Food.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Food.Infrastructure.Repositories
 {
@@ -92,15 +93,31 @@ namespace Food.Infrastructure.Repositories
         public async Task DeleteAsync(int id)
         {
             var menuItem = await _context.MenuItems.FindAsync(id);
-            if (menuItem != null)
+            if (menuItem == null)
+                return;
+
+            var isUsedInOrders = await _context.OrderItems.AnyAsync(oi => oi.MenuItemId == id);
+            if (isUsedInOrders)
             {
-                _context.MenuItems.Remove(menuItem);
+                throw new InvalidOperationException(
+                    "Cannot delete this menu item because it is part of existing customer orders. Mark it as Unavailable instead.");
             }
+
+            var cartItems = await _context.CartItems
+                .Where(ci => ci.MenuItemId == id)
+                .ToListAsync();
+
+            if (cartItems.Count > 0)
+            {
+                _context.CartItems.RemoveRange(cartItems);
+            }
+
+            _context.MenuItems.Remove(menuItem);
         }
 
         public async Task<IEnumerable<Category>> GetAllCategoriesAsync()
         {
-                return await _context.Categories
+            return await _context.Categories
                 .AsNoTracking()
                 .OrderBy(c => c.Id)
                 .ToListAsync();
