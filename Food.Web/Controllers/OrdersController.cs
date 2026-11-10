@@ -3,8 +3,12 @@ using Food.Application.Interfaces;
 using Food.Domain.Models.Entities;
 using Food.Web.Repsonses;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Food.Web.Controllers
 {
@@ -33,6 +37,7 @@ namespace Food.Web.Controllers
         /// <summary>
         /// Retrieves all customer orders across the platform (Admin only).
         /// </summary>
+        /// <returns>A chronological list of all orders placed on the platform.</returns>
         [HttpGet]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<OrderDTO>>), StatusCodes.Status200OK)]
@@ -47,6 +52,7 @@ namespace Food.Web.Controllers
         /// <summary>
         /// Retrieves the order history for the currently authenticated user.
         /// </summary>
+        /// <returns>A list of orders belonging to the current user.</returns>
         [HttpGet("my")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<OrderDTO>>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -60,8 +66,10 @@ namespace Food.Web.Controllers
         /// Retrieves a specific order by ID (Accessible by the order owner or an Admin).
         /// </summary>
         /// <param name="id">The order ID.</param>
+        /// <returns>Detailed order receipt including itemized line items and delivery address.</returns>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ApiResponse<OrderDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ApiResponse<OrderDTO>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetOrderById(int id)
@@ -85,9 +93,11 @@ namespace Food.Web.Controllers
         /// Places a new order from the current user's cart using server-computed database prices.
         /// </summary>
         /// <param name="request">Delivery address ID belonging to the user.</param>
+        /// <returns>The newly created order details.</returns>
         [HttpPost]
         [ProducesResponseType(typeof(ApiResponse<OrderDTO>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequestDTO request)
         {
@@ -109,9 +119,11 @@ namespace Food.Web.Controllers
         /// </remarks>
         /// <param name="id">The order ID.</param>
         /// <param name="request">Target OrderState enum value.</param>
+        /// <returns>A confirmation response indicating the state transition succeeded.</returns>
         [HttpPatch("{id}/status")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusRequestDTO request)
